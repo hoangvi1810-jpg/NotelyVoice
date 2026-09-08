@@ -9,6 +9,8 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.module.notelycompose.notes.extension.TEXT_SIZE_BODY
+import com.module.notelycompose.ai.AiTemplate
+import com.module.notelycompose.ai.DEFAULT_OPENROUTER_MODEL
 import com.module.notelycompose.modelDownloader.NO_MODEL_SELECTION
 import com.module.notelycompose.notes.ui.settings.languageCodeMap
 import com.module.notelycompose.platform.Theme
@@ -27,6 +29,8 @@ class PreferencesRepository(
         private val KEY_MODEL_DOWNLOAD_ID = longPreferencesKey("model_download_id")
         private val KEY_BODY_TEXT_SIZE = floatPreferencesKey("body_text_size")
         private val KEY_MODEL_SELECTION = intPreferencesKey("model_selection")
+        private val KEY_OPENROUTER_MODEL = stringPreferencesKey("openrouter_model")
+        private val KEY_NOTE_TEMPLATE = stringPreferencesKey("note_template")
     }
 
     suspend fun hasCompletedOnboarding(): Boolean {
@@ -88,6 +92,30 @@ class PreferencesRepository(
     suspend fun setModelSelection(modelSelection: Int) {
         dataStore.edit { prefs ->
             prefs[KEY_MODEL_SELECTION] = modelSelection
+        }
+    }
+
+    // OpenRouter model choice for AI Note/Highlights/Summary/title+tag generation. The API key
+    // itself is deliberately NOT stored here — see SecureKeyStore.
+    fun getOpenRouterModel(): Flow<String> = dataStore.data.map { prefs ->
+        prefs[KEY_OPENROUTER_MODEL] ?: DEFAULT_OPENROUTER_MODEL
+    }
+
+    suspend fun setOpenRouterModel(model: String) {
+        dataStore.edit { prefs ->
+            prefs[KEY_OPENROUTER_MODEL] = model
+        }
+    }
+
+    // Last-used Note Template, suggested as the default for the next note. The template that
+    // actually generated a given note's AI content is stored per-note in noteAiContentEntity.
+    fun getNoteTemplate(): Flow<String> = dataStore.data.map { prefs ->
+        prefs[KEY_NOTE_TEMPLATE] ?: AiTemplate.CLASSIC.id
+    }
+
+    suspend fun setNoteTemplate(template: String) {
+        dataStore.edit { prefs ->
+            prefs[KEY_NOTE_TEMPLATE] = template
         }
     }
 }

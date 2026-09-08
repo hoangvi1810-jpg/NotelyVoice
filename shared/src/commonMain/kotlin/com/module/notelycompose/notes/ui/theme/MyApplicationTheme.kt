@@ -16,15 +16,16 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
+// Beige/caramel identity — was Material's default purple (0xFF6200EE / 0xFFBB86FC).
 private val LightColorPalette = lightColors(
-    primary = Color(0xFF6200EE),
-    primaryVariant = Color(0xFF3700B3),
+    primary = Color(0xFF9C6B41),
+    primaryVariant = Color(0xFF6E4A2C),
     secondary = Color(0xFF03DAC5)
 )
 
 private val DarkColorPalette = darkColors(
-    primary = Color(0xFFBB86FC),
-    primaryVariant = Color(0xFF3700B3),
+    primary = Color(0xFFD9B98A),
+    primaryVariant = Color(0xFFB08D5E),
     secondary = Color(0xFF03DAC5)
 )
 

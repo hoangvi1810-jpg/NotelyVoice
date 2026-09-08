@@ -58,6 +58,7 @@ fun DetailNoteTopBar(
     onImportVideoClick: () -> Unit = {},
     onExportTextAsTxt: () -> Unit,
     onExportTextAsPDF: () -> Unit,
+    onExportTextAsMarkdown: () -> Unit = {},
     isRecordingExist: Boolean
 ) {
     var showExistingRecordConfirmDialog by remember { mutableStateOf(false) }
@@ -84,7 +85,8 @@ fun DetailNoteTopBar(
                 }
             },
             onExportTextAsTxt = onExportTextAsTxt,
-            onExportTextAsPDF = onExportTextAsPDF
+            onExportTextAsPDF = onExportTextAsPDF,
+            onExportTextAsMarkdown = onExportTextAsMarkdown
         )
     } else {
         DetailIOSNoteTopBar(
@@ -107,7 +109,8 @@ fun DetailNoteTopBar(
                 }
             },
             onExportTextAsTxt = onExportTextAsTxt,
-            onExportTextAsPDF = onExportTextAsPDF
+            onExportTextAsPDF = onExportTextAsPDF,
+            onExportTextAsMarkdown = onExportTextAsMarkdown
         )
     }
 
@@ -145,6 +148,7 @@ fun DetailAndroidNoteTopBar(
     onImportVideoClick: () -> Unit,
     onExportTextAsTxt: () -> Unit,
     onExportTextAsPDF: () -> Unit,
+    onExportTextAsMarkdown: () -> Unit = {},
     elevation: Dp = AppBarDefaults.TopAppBarElevation
 ) {
     TopAppBar(
@@ -178,7 +182,8 @@ fun DetailAndroidNoteTopBar(
                 onImportClick = onImportClick,
                 onImportVideoClick = onImportVideoClick,
                 onExportTextAsTxt = onExportTextAsTxt,
-                onExportTextAsPDF = onExportTextAsPDF
+                onExportTextAsPDF = onExportTextAsPDF,
+                onExportTextAsMarkdown = onExportTextAsMarkdown
             )
         },
         backgroundColor = LocalCustomColors.current.bodyBackgroundColor,
@@ -196,6 +201,7 @@ fun DetailIOSNoteTopBar(
     onImportVideoClick: () -> Unit,
     onExportTextAsTxt: () -> Unit,
     onExportTextAsPDF: () -> Unit,
+    onExportTextAsMarkdown: () -> Unit = {},
     onShare: () -> Unit
 ) {
     TopAppBar(
@@ -239,7 +245,8 @@ fun DetailIOSNoteTopBar(
                 onImportClick = onImportClick,
                 onImportVideoClick = onImportVideoClick,
                 onExportTextAsTxt = onExportTextAsTxt,
-                onExportTextAsPDF = onExportTextAsPDF
+                onExportTextAsPDF = onExportTextAsPDF,
+                onExportTextAsMarkdown = onExportTextAsMarkdown
             )
         },
         contentColor = LocalCustomColors.current.iOSBackButtonColor,
@@ -255,7 +262,8 @@ fun DetailDropDownMenu(
     onImportClick: () -> Unit = {},
     onImportVideoClick: () -> Unit = {},
     onExportTextAsTxt: () -> Unit,
-    onExportTextAsPDF: () -> Unit
+    onExportTextAsPDF: () -> Unit,
+    onExportTextAsMarkdown: () -> Unit = {}
 ) {
     var dropdownExpanded by remember { mutableStateOf(false) }
     Box {
@@ -314,6 +322,18 @@ fun DetailDropDownMenu(
                 }
             ) {
                 Text(stringResource(Res.string.top_bar_export_as_pdf))
+            }
+
+            DropdownMenuItem(
+                onClick = {
+                    dropdownExpanded = false
+                    onExportTextAsMarkdown()
+                }
+            ) {
+                // Not a stringResource() like the items above: adding a new resource key here
+                // needs the compose.resources codegen to run once in Gradle to verify, which
+                // wasn't available in this environment — hardcoded as a plain string instead.
+                Text("Export as Markdown")
             }
         }
     }

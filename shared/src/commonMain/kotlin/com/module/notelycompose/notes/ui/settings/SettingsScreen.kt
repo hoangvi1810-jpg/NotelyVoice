@@ -41,6 +41,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.module.notelycompose.modelDownloader.NO_MODEL_SELECTION
 import com.module.notelycompose.modelDownloader.OPTIMIZED_MODEL_SELECTION
+import com.module.notelycompose.modelDownloader.VIETNAMESE_MODEL
 import com.module.notelycompose.notes.extension.TEXT_SIZE_BODY
 import com.module.notelycompose.notes.extension.intBodyFontSizes
 import com.module.notelycompose.notes.ui.theme.LocalCustomColors
@@ -133,8 +134,13 @@ fun SettingsScreen(
             item {
                 LanguageModelSelectionSection(
                     navigateToModelSelection = navigateToModelSelection,
-                    modelSavedSelection = modelSavedSelection
+                    modelSavedSelection = modelSavedSelection,
+                    selectedLanguage = language
                 )
+            }
+
+            item {
+                AiSettingsSection()
             }
 
             item {
@@ -268,7 +274,7 @@ fun TranscriptionLanguageItem(
                         modifier = Modifier
                             .size(32.dp)
                             .background(
-                                Color(0xFF6366F1),
+                                Color(0xFF9C6B41), // was indigo 0xFF6366F1 — caramel accent
                                 RoundedCornerShape(16.dp)
                             ),
                         contentAlignment = Alignment.Center
@@ -621,7 +627,7 @@ fun ExportSettingSection() {
                         modifier = Modifier
                             .size(40.dp)
                             .background(
-                                Color(0xFF6366F1).copy(alpha = 0.1f),
+                                Color(0xFF9C6B41).copy(alpha = 0.1f), // was indigo 0xFF6366F1
                                 RoundedCornerShape(8.dp)
                             ),
                         contentAlignment = Alignment.Center
@@ -786,8 +792,14 @@ fun ExportSettingSection() {
 @Composable
 private fun LanguageModelSelectionSection(
     navigateToModelSelection: () -> Unit,
-    modelSavedSelection: Int
+    modelSavedSelection: Int,
+    selectedLanguage: String
 ) {
+    // Vietnamese (and other tonal languages routed through VIETNAMESE_MODEL in ModelSelection)
+    // uses a different pair of models than the general ladder, so the sizes/descriptions shown
+    // here must match what ModelSelection.getSelectedModel() will actually download.
+    val isVietnamese = selectedLanguage == VIETNAMESE_MODEL
+
     Column(
         modifier = Modifier.clickable {
             navigateToModelSelection()
@@ -804,21 +816,39 @@ private fun LanguageModelSelectionSection(
         SettingsModelOptionCard(
             model = when (modelSavedSelection) {
                 OPTIMIZED_MODEL_SELECTION -> {
-                    ModelOption(
-                        title = "Optimized model (multilingual)",
-                        description = "Highest accuracy available\n" +
-                                "Supports all languages except Hindi & Gujarati\n" +
-                                "Larger file size, slower performance",
-                        size = "468 MB"
-                    )
+                    if (isVietnamese) {
+                        ModelOption(
+                            title = "Optimized model (large-v3-turbo)",
+                            description = "Best accuracy for Vietnamese tones & diacritics\n" +
+                                    "Larger file size, slower performance",
+                            size = "547 MB"
+                        )
+                    } else {
+                        ModelOption(
+                            title = "Optimized model (multilingual)",
+                            description = "Highest accuracy available\n" +
+                                    "Supports all languages except Hindi & Gujarati\n" +
+                                    "Larger file size, slower performance",
+                            size = "468 MB"
+                        )
+                    }
                 }
                 else -> {
-                    ModelOption(
-                        title = "Standard model (multilingual)",
-                        description = "Faster performance and smaller file size\n" +
-                                "Supports all languages",
-                        size = "142 MB"
-                    )
+                    if (isVietnamese) {
+                        ModelOption(
+                            title = "Standard model (small, multilingual)",
+                            description = "Lighter fallback for weaker devices\n" +
+                                    "Still noticeably better on Vietnamese than the base model",
+                            size = "465 MB"
+                        )
+                    } else {
+                        ModelOption(
+                            title = "Standard model (multilingual)",
+                            description = "Faster performance and smaller file size\n" +
+                                    "Supports all languages",
+                            size = "142 MB"
+                        )
+                    }
                 }
             },
             onClick = {

@@ -85,6 +85,58 @@ class PlatformViewModel (
         }
     }
 
+    /**
+     * Exports the note as Markdown — AI Note / Highlights / Summary / Transcript sections, each
+     * included only if non-blank, so exporting before ever generating AI content just yields the
+     * transcript. Reuses the same generic text-file-picker plumbing as [onExportTextAsTxt];
+     * Markdown is just plain text with a `.md` extension, no new platform code needed.
+     */
+    fun onExportTextAsMarkdown(
+        title: String,
+        transcript: String,
+        aiNote: String,
+        highlights: String,
+        summary: String
+    ) {
+        val markdown = buildString {
+            appendLine("# $title")
+            if (summary.isNotBlank()) {
+                appendLine()
+                appendLine("## Summary")
+                appendLine(summary)
+            }
+            if (highlights.isNotBlank()) {
+                appendLine()
+                appendLine("## Highlights")
+                highlights.lineSequence().filter { it.isNotBlank() }.forEach { line ->
+                    appendLine("- ${line.removePrefix("-").removePrefix("•").trim()}")
+                }
+            }
+            if (aiNote.isNotBlank()) {
+                appendLine()
+                appendLine("## AI Note")
+                appendLine(aiNote)
+            }
+            appendLine()
+            appendLine("## Transcript")
+            appendLine(transcript)
+        }
+
+        val defaultFileName = "note_${Clock.System.now().toEpochMilliseconds()}.md"
+        _state.value = _state.value.copy(isExporting = true)
+
+        platformUtils.exportTextWithFilePicker(
+            text = markdown,
+            fileName = defaultFileName
+        ) { success, message ->
+            _state.value = _state.value.copy(
+                isExporting = false,
+                exportSuccess = success,
+                exportMessage = message ?: if (success) "Markdown exported successfully" else "Failed to export Markdown"
+            )
+        }
+    }
+
     fun onExportTextAsPDF(text: String) {
         viewModelScope.launch {
             if (text.isNotBlank()) {

@@ -53,6 +53,9 @@ kotlin {
             // splash
             implementation(libs.core.splashscreen)
             implementation(libs.androidx.compose.documentfile)
+
+            // Ktor engine for the OpenRouter AI client
+            implementation(libs.ktor.client.cio)
         }
 
         commonMain.dependencies {
@@ -87,12 +90,20 @@ kotlin {
             implementation(libs.datastore)
 
             implementation(project(":core:audio"))
+
+            // Ktor (OpenRouter AI client) — engine is added per-platform below
+            implementation(libs.ktor.client.core)
+            implementation(libs.ktor.client.content.negotiation)
+            implementation(libs.ktor.serialization.kotlinx.json)
         }
 
         iosMain.dependencies {
             implementation(libs.sqldelight.native.driver)
             compileOnly(libs.jetbrains.atomicfu)
             api(libs.jetbrains.atomicfu)
+
+            // Ktor engine for the OpenRouter AI client
+            implementation(libs.ktor.client.darwin)
         }
 
         val commonTest by getting {

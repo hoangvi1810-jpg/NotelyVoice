@@ -12,6 +12,7 @@ import com.module.notelycompose.platform.IOSPlatform
 import com.module.notelycompose.platform.Platform
 import com.module.notelycompose.platform.PlatformAudioPlayer
 import com.module.notelycompose.platform.PlatformUtils
+import com.module.notelycompose.platform.SecureKeyStore
 import com.module.notelycompose.platform.Transcriber
 import com.module.notelycompose.platform.dataStore
 import com.module.notelycompose.platform.pdf.IOSPdfGenerator
@@ -45,6 +46,8 @@ actual val platformModule = module {
     single { Downloader() }
 
     single { Transcriber() }
+
+    single { SecureKeyStore() }
 
     // domain
     single<AudioRecorderInteractor> { AudioRecorderInteractorImpl(get(), get()) }

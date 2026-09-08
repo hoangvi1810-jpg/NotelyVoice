@@ -159,6 +159,26 @@ class TextEditorViewModel(
         return editorPresentationToUiStateMapper.mapToUiState(presentationState)
     }
 
+    /**
+     * Sets a short, AI-generated title distinct from the note's content (title and content are
+     * otherwise always kept identical — see [onUpdateContent]). Called once per note, right after
+     * its first AI Note generation — see NoteAiViewModel.generatedTitle.
+     */
+    fun updateTitle(title: String) {
+        val noteId = _currentNoteId.value
+        if (noteId == null || noteId == ID_NOT_SET) return
+        val state = _editorPresentationState.value
+        updateNote(
+            noteId = noteId,
+            title = title,
+            content = state.content.text,
+            starred = state.starred,
+            formatting = state.formats,
+            textAlign = state.textAlign,
+            recordingPath = state.recording.recordingPath
+        )
+    }
+
     private fun insertNote(
         title: String,
         content: String,

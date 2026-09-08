@@ -119,6 +119,12 @@ class TranscriptionViewModel(
         }
     }
 
+    // Intentionally still on the local TF-IDF summarizer (no Vietnamese support), not
+    // AiRepository: this toggle runs mid-recording, before the note has a persisted id, and
+    // AiRepository's cache is keyed by that id. The real, Vietnamese-capable Summary now lives in
+    // the note detail screen's Summary tab (see NoteAiViewModel), which runs after the note is
+    // saved. Wiring this pre-save toggle to a network call would also add cost/latency to what is
+    // currently an instant, free, offline action — a deliberate trade-off, not an oversight.
     fun summarize() {
         if (_uiState.value.viewOriginalText) {
             viewModelScope.launch {

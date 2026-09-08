@@ -77,6 +77,7 @@ import com.module.notelycompose.modelDownloader.ModelDownloaderViewModel
 import com.module.notelycompose.audio.presentation.AudioImportViewModel
 import com.module.notelycompose.audio.ui.importing.ImportingAudioStateHost
 import com.module.notelycompose.modelDownloader.ModelSelection
+import com.module.notelycompose.notes.presentation.detail.NoteAiViewModel
 import com.module.notelycompose.notes.presentation.detail.TextEditorViewModel
 import com.module.notelycompose.notes.ui.share.ShareDialog
 import com.module.notelycompose.notes.ui.theme.LocalCustomColors
@@ -108,7 +109,8 @@ fun NoteDetailScreen(
     platformViewModel: PlatformViewModel = koinViewModel(),
     audioImportViewModel: AudioImportViewModel = koinViewModel(),
     editorViewModel: TextEditorViewModel,
-    modelSelection: ModelSelection = koinInject()
+    modelSelection: ModelSelection = koinInject(),
+    noteAiViewModel: NoteAiViewModel = koinViewModel()
 ) {
     val currentNoteId by editorViewModel.currentNoteId.collectAsStateWithLifecycle()
     val importingState by audioImportViewModel.importingAudioState.collectAsStateWithLifecycle()
@@ -131,6 +133,21 @@ fun NoteDetailScreen(
     var showExistingRecordConfirmDialog by remember { mutableStateOf(false) }
     var showCopiedTooltip by remember { mutableStateOf(false) }
     var isFabVisible by remember { mutableStateOf(true) }
+    var selectedTab by remember { mutableStateOf(NoteDetailTab.AI_NOTE) }
+    var showTemplateSheet by remember { mutableStateOf(false) }
+    val aiUiState by noteAiViewModel.uiState.collectAsStateWithLifecycle()
+
+    LaunchedEffect(currentNoteId) {
+        currentNoteId?.let { noteAiViewModel.loadIfNeeded(it) }
+    }
+
+    // Auto title + tags: applied once, right after the note's first AI generation.
+    LaunchedEffect(aiUiState.generatedTitle) {
+        aiUiState.generatedTitle?.let { title ->
+            editorViewModel.updateTitle(title)
+            noteAiViewModel.consumeGeneratedTitle()
+        }
+    }
 
     LaunchedEffect(Unit) {
         if (noteId.toLong() > 0L) {
@@ -195,6 +212,20 @@ fun NoteDetailScreen(
                 },
                 onExportTextAsPDF = {
                     platformViewModel.onExportTextAsPDF(editorState.content.text)
+                },
+                onExportTextAsMarkdown = {
+                    val exportTitle = editorState.content.text
+                        .lineSequence()
+                        .firstOrNull { it.isNotBlank() }
+                        ?.take(60)
+                        ?: "Ghi chú"
+                    platformViewModel.onExportTextAsMarkdown(
+                        title = exportTitle,
+                        transcript = editorState.content.text,
+                        aiNote = aiUiState.aiNote,
+                        highlights = aiUiState.highlights,
+                        summary = aiUiState.summary
+                    )
                 }
             )
         },
@@ -272,19 +303,64 @@ fun NoteDetailScreen(
         }
     ) { paddingValues ->
 
-        NoteContent(
-            paddingValues = paddingValues,
-            newNoteDateString = editorState.createdAt,
-            editorState = editorState,
-            showFormatBar = showFormatBar,
-            focusRequester = focusRequester,
-            audioPlayerUiState = audioPlayerUiState,
-            textEditorViewModel = editorViewModel,
-            audioPlayerViewModel = audioPlayerViewModel,
-            onFocusChange = {
-                isTextFieldFocused = it
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+        ) {
+            NoteDetailTabRow(
+                selectedTab = selectedTab,
+                onTabSelected = { selectedTab = it }
+            )
+
+            if (selectedTab != NoteDetailTab.TRANSCRIPT) {
+                NoteDetailTemplateBar(
+                    template = aiUiState.template,
+                    onOpenTemplatePicker = { showTemplateSheet = true },
+                    onRegenerate = { noteAiViewModel.regenerate(editorState.content.text) },
+                    isLoading = aiUiState.isLoading
+                )
+            }
+
+            when (selectedTab) {
+                NoteDetailTab.TRANSCRIPT -> {
+                    NoteContent(
+                        modifier = Modifier.weight(1f),
+                        paddingValues = PaddingValues(0.dp),
+                        newNoteDateString = editorState.createdAt,
+                        editorState = editorState,
+                        showFormatBar = showFormatBar,
+                        focusRequester = focusRequester,
+                        audioPlayerUiState = audioPlayerUiState,
+                        textEditorViewModel = editorViewModel,
+                        audioPlayerViewModel = audioPlayerViewModel,
+                        onFocusChange = {
+                            isTextFieldFocused = it
+                        },
+                        onFabVisibility = { isFabVisible = it }
+                    )
+                }
+
+                else -> {
+                    AiGeneratedContentArea(
+                        tab = selectedTab,
+                        uiState = aiUiState,
+                        onGenerate = { noteAiViewModel.regenerate(editorState.content.text) },
+                        onDismissError = noteAiViewModel::dismissError,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+        }
+    }
+
+    if (showTemplateSheet) {
+        NoteTemplateBottomSheet(
+            selectedTemplate = aiUiState.template,
+            onSelectTemplate = { template ->
+                noteAiViewModel.selectTemplate(template, editorState.content.text)
             },
-            onFabVisibility = { isFabVisible = it }
+            onDismiss = { showTemplateSheet = false }
         )
     }
 
@@ -403,7 +479,7 @@ private fun NoteContent(
     }
 
     Column(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxSize()
             .padding(paddingValues)
             .verticalScroll(scrollState)

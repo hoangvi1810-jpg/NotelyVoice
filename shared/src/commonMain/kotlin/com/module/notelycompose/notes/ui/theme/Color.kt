@@ -4,13 +4,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.runtime.compositionLocalOf
 
 val DarkCustomColors = CustomColors(
-    sortAscendingIconColor = Color(0xFF8514CB),
+    sortAscendingIconColor = Color(0xFFD9B98A), // was purple 0xFF8514CB — warm tan, visible on black
     backgroundViewColor = Color.Black, // // Color(0xFF181818),
     dateContentColorViewColor = Color.White,
     dateContentIconColor = Color(0xFFCCCCCC),
     bottomBarBackgroundColor = Color.White,
-    bottomBarIconColor = Color(0xFF8514CB),
-    noteListBackgroundColor = Color(0xFFEEEEEE),
+    bottomBarIconColor = Color(0xFFD9B98A), // was purple 0xFF8514CB
+    noteListBackgroundColor = Color(0xFFEDE3D0), // was 0xFFEEEEEE — warm beige instead of neutral gray
     bodyBackgroundColor = Color.Black,  // Color(0xFF181818),
     onBodyColor = Color(0xFFF5F5F5),
     bodyContentColor = Color.White,
@@ -52,13 +52,13 @@ val DarkCustomColors = CustomColors(
 )
 
 val LightCustomColors = CustomColors(
-    sortAscendingIconColor = Color(0xFFA260CC),
+    sortAscendingIconColor = Color(0xFF9C6B41), // was purple 0xFFA260CC — caramel accent
     backgroundViewColor = Color(0xFFFFFFFF),
     dateContentColorViewColor = Color.Black,
     dateContentIconColor = Color(0xFF1E1E24),
     bottomBarBackgroundColor = Color(0xFFFFFFFF),
     bottomBarIconColor = Color.White,
-    noteListBackgroundColor = Color(0xFFF4E7F9),
+    noteListBackgroundColor = Color(0xFFF6ECDA), // was lavender 0xFFF4E7F9 — warm beige
     bodyBackgroundColor = Color(0xFFFFFFFF),
     onBodyColor = Color(0xFF212121),
     contentTopColor = Color.Black,

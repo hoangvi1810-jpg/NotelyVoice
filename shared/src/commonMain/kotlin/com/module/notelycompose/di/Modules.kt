@@ -1,6 +1,9 @@
 package com.module.notelycompose.di
 
 
+import com.module.notelycompose.ai.AiContentDataSource
+import com.module.notelycompose.ai.AiRepository
+import com.module.notelycompose.ai.OpenRouterClient
 import com.module.notelycompose.audio.presentation.AudioPlayerViewModel
 import com.module.notelycompose.audio.presentation.AudioRecorderViewModel
 import com.module.notelycompose.audio.presentation.mappers.AudioPlayerPresentationToUiMapper
@@ -21,6 +24,7 @@ import com.module.notelycompose.notes.domain.mapper.TextFormatMapper
 import com.module.notelycompose.audio.presentation.AudioImportViewModel
 import com.module.notelycompose.export.presentation.ExportSelectionViewModel
 import com.module.notelycompose.modelDownloader.ModelSelection
+import com.module.notelycompose.notes.presentation.detail.NoteAiViewModel
 import com.module.notelycompose.notes.presentation.detail.NoteDetailScreenViewModel
 import com.module.notelycompose.notes.presentation.detail.TextEditorViewModel
 import com.module.notelycompose.notes.presentation.helpers.TextEditorHelper
@@ -44,13 +48,22 @@ internal expect val platformModule: Module
 
 val appModule = module {
 
+    // Shared by NoteSqlDelightDataSource and AiContentDataSource — both read/write tables in the
+    // same SQLDelight database, so they reuse one NoteDatabase facade over the one SqlDriver.
+    single { NoteDatabase(get()) }
+
     single<NoteDataSource> {
         NoteSqlDelightDataSource(
-            database = NoteDatabase(get())
+            database = get()
         )
     }
 
     factory { ModelSelection(get()) }
+
+    // AI (OpenRouter)
+    single { OpenRouterClient() }
+    single { AiContentDataSource(get()) }
+    single { AiRepository(get(), get(), get(), get()) }
 
 }
 
@@ -77,6 +90,7 @@ val viewModelModule = module {
     viewModelOf(::TranscriptionViewModel)
     viewModelOf(::TextEditorViewModel)
     viewModelOf(::NoteDetailScreenViewModel)
+    viewModelOf(::NoteAiViewModel)
     viewModelOf(::ModelDownloaderViewModel)
     viewModelOf(::AudioRecorderViewModel)
     viewModelOf(::AudioPlayerViewModel)
