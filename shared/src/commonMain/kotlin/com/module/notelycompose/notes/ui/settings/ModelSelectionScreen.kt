@@ -13,6 +13,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.module.notelycompose.modelDownloader.NO_MODEL_SELECTION
+import com.module.notelycompose.modelDownloader.VIETNAMESE_MODEL
 import com.module.notelycompose.notes.ui.detail.AndroidNoteTopBar
 import com.module.notelycompose.notes.ui.detail.IOSNoteTopBar
 import com.module.notelycompose.notes.ui.theme.LocalCustomColors
@@ -52,18 +53,43 @@ fun ModelSelectionScreen(
     navigateToModelExplanation: () -> Unit,
     preferencesRepository: PreferencesRepository = koinInject()
 ) {
-    val modelOptions = listOf(
-        ModelOption(
-            title = stringResource(Res.string.standard_model_title),
-            description = stringResource(Res.string.standard_model_setting_desc),
-            size = stringResource(Res.string.standard_model_setting_size)
-        ),
-        ModelOption(
-            title = stringResource(Res.string.optimized_model_title),
-            description = stringResource(Res.string.optimized_model_setting_desc),
-            size = stringResource(Res.string.optimized_model_setting_size)
+    // Vietnamese routes through a different pair of models in ModelSelection.getSelectedModel()
+    // (small / large-v3-turbo instead of base / small — see ModelSelection.kt) since the base
+    // model misses tones/diacritics too often to be usable. This screen must show the labels and
+    // sizes that match what will actually be downloaded, not the generic multilingual copy.
+    val language by preferencesRepository.getDefaultTranscriptionLanguage()
+        .collectAsState(languageCodeMap.entries.first().key)
+    val isVietnamese = language == VIETNAMESE_MODEL
+
+    val modelOptions = if (isVietnamese) {
+        listOf(
+            ModelOption(
+                title = "Standard model (small, multilingual)",
+                description = "Lighter fallback for weaker devices\n" +
+                    "Still noticeably better on Vietnamese than the base model",
+                size = "465 MB"
+            ),
+            ModelOption(
+                title = "Optimized model (large-v3-turbo)",
+                description = "Best accuracy for Vietnamese tones & diacritics\n" +
+                    "Larger file size, slower performance",
+                size = "547 MB"
+            )
         )
-    )
+    } else {
+        listOf(
+            ModelOption(
+                title = stringResource(Res.string.standard_model_title),
+                description = stringResource(Res.string.standard_model_setting_desc),
+                size = stringResource(Res.string.standard_model_setting_size)
+            ),
+            ModelOption(
+                title = stringResource(Res.string.optimized_model_title),
+                description = stringResource(Res.string.optimized_model_setting_desc),
+                size = stringResource(Res.string.optimized_model_setting_size)
+            )
+        )
+    }
 
     var selectedModel by remember { mutableIntStateOf(0) } // Standard model selected by default
     var modelSavedSelection by remember { mutableStateOf(NO_MODEL_SELECTION) }
