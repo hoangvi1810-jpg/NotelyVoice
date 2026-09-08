@@ -11,6 +11,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -60,7 +61,12 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.module.notelycompose.audio.presentation.AudioRecorderViewModel
 import com.module.notelycompose.core.debugPrintln
 import com.module.notelycompose.notes.presentation.detail.TextEditorViewModel
+import com.module.notelycompose.notes.ui.theme.HeroGradientBrush
 import com.module.notelycompose.notes.ui.theme.LocalCustomColors
+import com.module.notelycompose.notes.ui.theme.PressDepth
+import com.module.notelycompose.notes.ui.theme.pressScale
+import com.module.notelycompose.notes.ui.theme.softShadow
+import com.module.notelycompose.notes.ui.theme.Elevation
 import com.module.notelycompose.platform.HandlePlatformBackNavigation
 import com.module.notelycompose.platform.getPlatform
 import com.module.notelycompose.resources.Res
@@ -165,18 +171,24 @@ private fun RecordingInitialScreen(
                 .align(Alignment.BottomCenter),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            val recordInteraction = remember { MutableInteractionSource() }
             Box(
                 modifier = Modifier
-                    .size(64.dp)
+                    .size(72.dp)
+                    .pressScale(recordInteraction, PressDepth.Standard)
+                    .softShadow(Elevation.overlay, cornerRadius = 36.dp, tint = LocalCustomColors.current.accent.copy(alpha = 0.35f))
                     .clip(CircleShape)
-                    .background(Color.Green)
-                    .clickable { onTapToRecord() },
+                    .background(HeroGradientBrush)
+                    .clickable(
+                        interactionSource = recordInteraction,
+                        indication = null
+                    ) { onTapToRecord() },
                 contentAlignment = Alignment.Center
             ) {
-                androidx.compose.material3.Icon(
+                Icon(
                     imageVector = Images.Icons.IcRecorder,
                     contentDescription = stringResource(Res.string.recording_ui_microphone),
-                    tint = LocalCustomColors.current.bodyBackgroundColor,
+                    tint = Color.White,
                     modifier = Modifier.size(32.dp)
                 )
             }
@@ -261,9 +273,8 @@ private fun LandscapeRecordingInProgressScreen(
                 )
                 Text(
                     text = counterTimeString,
-                    style = MaterialTheme.typography.headlineLarge,
-                    fontWeight = FontWeight.Normal,
-                    color = LocalCustomColors.current.bodyContentColor
+                    style = MaterialTheme.typography.displaySmall,
+                    color = LocalCustomColors.current.onSurface
                 )
             }
         }
@@ -287,16 +298,16 @@ private fun LandscapeRecordingInProgressScreen(
                         modifier = Modifier
                             .size(64.dp)
                             .clip(CircleShape)
-                            .border(2.dp, LocalCustomColors.current.bodyContentColor, CircleShape)
-                            .padding(vertical = 2.dp, horizontal = 2.dp),
+                            .background(LocalCustomColors.current.surface)
+                            .border(1.5.dp, LocalCustomColors.current.outline, CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = if (!isRecordPaused) Images.Icons.IcPause else Icons.Filled.PlayArrow,
                             contentDescription = stringResource(Res.string.transcription_icon),
-                            tint = LocalCustomColors.current.bodyContentColor,
+                            tint = LocalCustomColors.current.onSurface,
                             modifier = Modifier
-                                .size(32.dp)
+                                .size(28.dp)
                                 .clickable {
                                     if (isRecordPaused) {
                                         onResumeRecording()
@@ -311,18 +322,17 @@ private fun LandscapeRecordingInProgressScreen(
                         modifier = Modifier
                             .size(64.dp)
                             .clip(CircleShape)
-                            .border(2.dp, LocalCustomColors.current.bodyContentColor, CircleShape)
-                            .padding(2.dp),
+                            .background(LocalCustomColors.current.danger)
+                            .clickable {
+                                onStopRecording()
+                            },
                         contentAlignment = Alignment.Center
                     ) {
                         Box(
                             modifier = Modifier
-                                .size(32.dp)
-                                .clip(RoundedCornerShape(4.dp))
-                                .background(Color.Red)
-                                .clickable {
-                                    onStopRecording()
-                                }
+                                .size(20.dp)
+                                .clip(RoundedCornerShape(5.dp))
+                                .background(LocalCustomColors.current.onDanger)
                         )
                     }
                 }
@@ -373,9 +383,8 @@ private fun PotraitRecordingInProgressScreen(
                 )
                 Text(
                     text = counterTimeString,
-                    style = MaterialTheme.typography.headlineLarge,
-                    fontWeight = FontWeight.Normal,
-                    color = LocalCustomColors.current.bodyContentColor
+                    style = MaterialTheme.typography.displaySmall,
+                    color = LocalCustomColors.current.onSurface
                 )
             }
         }
@@ -399,16 +408,16 @@ private fun PotraitRecordingInProgressScreen(
                         modifier = Modifier
                             .size(64.dp)
                             .clip(CircleShape)
-                            .border(2.dp, LocalCustomColors.current.bodyContentColor, CircleShape)
-                            .padding(vertical = 2.dp, horizontal = 2.dp),
+                            .background(LocalCustomColors.current.surface)
+                            .border(1.5.dp, LocalCustomColors.current.outline, CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = if (!isRecordPaused) Images.Icons.IcPause else Icons.Filled.PlayArrow,
                             contentDescription = stringResource(Res.string.transcription_icon),
-                            tint = LocalCustomColors.current.bodyContentColor,
+                            tint = LocalCustomColors.current.onSurface,
                             modifier = Modifier
-                                .size(32.dp)
+                                .size(28.dp)
                                 .clickable {
                                     if (isRecordPaused) {
                                         onResumeRecording()
@@ -423,18 +432,17 @@ private fun PotraitRecordingInProgressScreen(
                         modifier = Modifier
                             .size(64.dp)
                             .clip(CircleShape)
-                            .border(2.dp, LocalCustomColors.current.bodyContentColor, CircleShape)
-                            .padding(2.dp),
+                            .background(LocalCustomColors.current.danger)
+                            .clickable {
+                                onStopRecording()
+                            },
                         contentAlignment = Alignment.Center
                     ) {
                         Box(
                             modifier = Modifier
-                                .size(32.dp)
-                                .clip(RoundedCornerShape(4.dp))
-                                .background(Color.Red)
-                                .clickable {
-                                    onStopRecording()
-                                }
+                                .size(20.dp)
+                                .clip(RoundedCornerShape(5.dp))
+                                .background(LocalCustomColors.current.onDanger)
                         )
                     }
                 }
@@ -455,7 +463,7 @@ private fun PotraitRecordingInProgressScreen(
 private fun LoadingAnimation(
     isRecordPaused: Boolean
 ) {
-    val drawArcColor = LocalCustomColors.current.bodyContentColor
+    val drawArcColor = if (isRecordPaused) LocalCustomColors.current.onSurfaceVariant else LocalCustomColors.current.danger
     val rotationAngle = remember { Animatable(0f) }
 
     LaunchedEffect(isRecordPaused) {
@@ -473,12 +481,14 @@ private fun LoadingAnimation(
     }
 
     Canvas(modifier = Modifier.size(200.dp)) {
+        // Was Stroke(width = 4f) -- a raw pixel value, so it renders as a hairline on a 3x
+        // display. 4.dp.toPx() scales with density like every other stroke in the app.
         drawArc(
             color = drawArcColor,
             startAngle = rotationAngle.value,
             sweepAngle = 300f,
             useCenter = false,
-            style = Stroke(width = 4f, cap = StrokeCap.Round)
+            style = Stroke(width = 4.dp.toPx(), cap = StrokeCap.Round)
         )
     }
 }
@@ -581,9 +591,9 @@ private fun RecordingUiComponentBackButton(
                 tint = LocalCustomColors.current.bodyContentColor
             )
             Spacer(modifier = Modifier.width(8.dp))
-            androidx.compose.material.Text(
+            Text(
                 text = stringResource(Res.string.top_bar_back),
-                style = androidx.compose.material.MaterialTheme.typography.body1,
+                style = MaterialTheme.typography.bodyLarge,
                 color = LocalCustomColors.current.bodyContentColor
             )
         }

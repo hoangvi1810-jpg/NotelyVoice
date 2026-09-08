@@ -22,6 +22,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.module.notelycompose.platform.getPlatform
+import com.module.notelycompose.notes.ui.theme.LocalCustomColors
 import com.module.notelycompose.notes.ui.theme.PoppingsFontFamily
 import com.module.notelycompose.platform.presentation.PlatformUiState
 import com.module.notelycompose.platform.presentation.PlatformViewModel
@@ -71,12 +72,13 @@ fun OnboardingWalkthrough(
     onFinish: () -> Unit = {},
     platformState: PlatformUiState
 ) {
+    val colors = LocalCustomColors.current
     val pages = mutableListOf(
         OnboardingPage(
             title = stringResource(Res.string.onboarding_screen_one_title),
             description = stringResource(Res.string.onboarding_screen_one_desc),
-            backgroundColor = Color(0xFFFFFAD0),
-            textColor = Color(0xFFCA7F58),
+            backgroundColor = colors.accentSoft,
+            textColor = colors.accent,
             androidResources = when {
                 platformState.isTablet -> painterResource(Res.drawable.onboarding_android_tablet_one)
                 else -> painterResource(Res.drawable.onboarding_android_one)
@@ -89,8 +91,8 @@ fun OnboardingWalkthrough(
         OnboardingPage(
             title = stringResource(Res.string.onboarding_screen_two_title),
             description = stringResource(Res.string.onboarding_screen_two_desc),
-            backgroundColor = Color(0xFFFFFAD0),
-            textColor = Color(0xFFCA7F58),
+            backgroundColor = colors.accentSoft,
+            textColor = colors.accent,
             androidResources = when {
                 platformState.isTablet -> painterResource(Res.drawable.onboarding_android_tablet_two)
                 else -> painterResource(Res.drawable.onboarding_android_two)
@@ -103,8 +105,8 @@ fun OnboardingWalkthrough(
         OnboardingPage(
             title = stringResource(Res.string.onboarding_screen_three_title),
             description = stringResource(Res.string.onboarding_screen_three_desc),
-            backgroundColor = Color(0xFFFFFAD0),
-            textColor = Color(0xFFCA7F58),
+            backgroundColor = colors.accentSoft,
+            textColor = colors.accent,
             androidResources = when {
                 platformState.isTablet -> painterResource(Res.drawable.onboarding_android_tablet_three)
                 else -> painterResource(Res.drawable.onboarding_android_three)
@@ -117,8 +119,8 @@ fun OnboardingWalkthrough(
         OnboardingPage(
             title = stringResource(Res.string.onboarding_screen_four_title),
             description = stringResource(Res.string.onboarding_screen_four_desc),
-            backgroundColor = Color(0xFFFFFAD0),
-            textColor = Color(0xFFCA7F58),
+            backgroundColor = colors.accentSoft,
+            textColor = colors.accent,
             androidResources = when {
                 platformState.isTablet -> painterResource(Res.drawable.onboarding_android_tablet_four)
                 else -> painterResource(Res.drawable.onboarding_android_four)
@@ -296,7 +298,7 @@ fun VoiceNotePageContent(
             text = page.description,
             fontSize = descriptionFontSize,
             fontWeight = FontWeight.Medium,
-            color = Color(0xFF333333),
+            color = LocalCustomColors.current.onSurfaceVariant,
             textAlign = TextAlign.Center,
             lineHeight = 24.sp,
             modifier = Modifier

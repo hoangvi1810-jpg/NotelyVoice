@@ -20,6 +20,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowForward
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material3.Card
@@ -250,12 +251,14 @@ fun TranscriptionLanguageItem(
                 .fillMaxWidth()
                 .clickable { navigateToLanguages() }
                 .border(
-                    2.dp,
-                    LocalCustomColors.current.bodyContentColor,
-                    RoundedCornerShape(8.dp)
+                    // Was 2dp border with RoundedCornerShape(8.dp) while the Card's own shape
+                    // below is 12dp -- the stroke didn't follow the card's actual corners.
+                    1.5.dp,
+                    LocalCustomColors.current.outline,
+                    RoundedCornerShape(12.dp)
             ),
             colors = CardDefaults.cardColors(
-                containerColor = LocalCustomColors.current.settingLanguageBackgroundColor
+                containerColor = LocalCustomColors.current.surface
             ),
             elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
             shape = RoundedCornerShape(12.dp)
@@ -274,14 +277,14 @@ fun TranscriptionLanguageItem(
                         modifier = Modifier
                             .size(32.dp)
                             .background(
-                                Color(0xFF9C6B41), // was indigo 0xFF6366F1 — caramel accent
+                                LocalCustomColors.current.accent,
                                 RoundedCornerShape(16.dp)
                             ),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
                             text = selectedLanguage.uppercase().take(2),
-                            color = Color.White,
+                            color = LocalCustomColors.current.onAccent,
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold
                         )
@@ -290,7 +293,7 @@ fun TranscriptionLanguageItem(
                     Text(
                         text = languageCodeMap[selectedLanguage] ?:"en",
                         fontSize = 16.sp,
-                        color = LocalCustomColors.current.bodyContentColor,
+                        color = LocalCustomColors.current.onSurface,
                         modifier = Modifier.padding(start = 12.dp)
                     )
                 }
@@ -298,7 +301,7 @@ fun TranscriptionLanguageItem(
                 Icon(
                     imageVector = Icons.Default.ArrowForward,
                     contentDescription = stringResource(Res.string.select_language),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    tint = LocalCustomColors.current.onSurfaceVariant,
                     modifier = Modifier.size(20.dp)
                 )
             }
@@ -526,12 +529,15 @@ fun TextSizeSettingItem(
             .fillMaxWidth()
             .border(
                 1.dp,
-                LocalCustomColors.current.settingsBodyBorderColor,
+                LocalCustomColors.current.outline,
                 RoundedCornerShape(12.dp)
             )
             .clickable { onClick() },
+        // Was containerColor = Color.White, then overpainted by a `.background(bodyBackgroundColor)`
+        // on the inner Row below -- in dark mode this left the Card's own white corners peeking
+        // out past the Row. Both now point at the same token so they can't disagree.
         colors = CardDefaults.cardColors(
-            containerColor = Color.White
+            containerColor = LocalCustomColors.current.surface
         ),
         elevation = CardDefaults.cardElevation(
             defaultElevation = 0.dp
@@ -539,7 +545,6 @@ fun TextSizeSettingItem(
     ) {
         Row(
             modifier = Modifier
-                .background(LocalCustomColors.current.bodyBackgroundColor)
                 .fillMaxWidth()
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
@@ -551,7 +556,7 @@ fun TextSizeSettingItem(
                     text = title,
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Normal,
-                    color = LocalCustomColors.current.bodyContentColor
+                    color = LocalCustomColors.current.onSurface
                 )
 
                 Spacer(modifier = Modifier.height(4.dp))
@@ -560,7 +565,7 @@ fun TextSizeSettingItem(
                     text = subtitle,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Normal,
-                    color = LocalCustomColors.current.settingsBodyTextColor,
+                    color = LocalCustomColors.current.onSurfaceVariant,
                     lineHeight = 20.sp
                 )
             }
@@ -571,14 +576,14 @@ fun TextSizeSettingItem(
                 Text(
                     text = currentValue,
                     fontSize = 16.sp,
-                    color = LocalCustomColors.current.settingsBodyTextColor,
+                    color = LocalCustomColors.current.onSurfaceVariant,
                     modifier = Modifier.padding(end = 8.dp)
                 )
 
                 Icon(
                     imageVector = Icons.Default.KeyboardArrowRight,
                     contentDescription = stringResource(Res.string.navigate),
-                    tint = Color.Gray,
+                    tint = LocalCustomColors.current.onSurfaceVariant,
                     modifier = Modifier.size(24.dp)
                 )
             }
@@ -603,11 +608,11 @@ fun ExportSettingSection() {
                 .fillMaxWidth()
                 .border(
                     1.dp,
-                    LocalCustomColors.current.settingsBodyBorderColor,
+                    LocalCustomColors.current.outline,
                     RoundedCornerShape(12.dp)
                 ),
             colors = CardDefaults.cardColors(
-                containerColor = LocalCustomColors.current.bodyBackgroundColor
+                containerColor = LocalCustomColors.current.surface
             ),
             elevation = CardDefaults.cardElevation(
                 defaultElevation = 0.dp
@@ -623,18 +628,22 @@ fun ExportSettingSection() {
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalAlignment = Alignment.Top
                 ) {
+                    // Was an emoji ("👆") standing in for an icon -- one of the clearest "cheap"
+                    // tells in the app. A numbered step badge reads as intentional instead.
                     Box(
                         modifier = Modifier
                             .size(40.dp)
                             .background(
-                                Color(0xFF9C6B41).copy(alpha = 0.1f), // was indigo 0xFF6366F1
+                                LocalCustomColors.current.accentSoft,
                                 RoundedCornerShape(8.dp)
                             ),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = "👆",
-                            fontSize = 20.sp
+                            text = "1",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = LocalCustomColors.current.accent
                         )
                     }
 
@@ -644,7 +653,7 @@ fun ExportSettingSection() {
                         Text(
                             text = stringResource(Res.string.batch_export_settings_how_to_description_1),
                             fontSize = 14.sp,
-                            color = LocalCustomColors.current.settingsBodyTextColor,
+                            color = LocalCustomColors.current.onSurfaceVariant,
                             lineHeight = 20.sp
                         )
                     }
@@ -656,7 +665,7 @@ fun ExportSettingSection() {
                     modifier = Modifier
                         .fillMaxWidth()
                         .background(
-                            LocalCustomColors.current.settingsBodyBorderColor.copy(alpha = 0.1f),
+                            LocalCustomColors.current.surfaceSunken,
                             RoundedCornerShape(8.dp)
                         )
                         .padding(12.dp)
@@ -672,14 +681,14 @@ fun ExportSettingSection() {
                                 text = stringResource(Res.string.batch_export_settings_how_to_1),
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = LocalCustomColors.current.bodyContentColor
+                                color = LocalCustomColors.current.onSurface
                             )
 
                             Box(
                                 modifier = Modifier
                                     .size(24.dp)
                                     .background(
-                                        Color(0xFFCD9777),
+                                        LocalCustomColors.current.accent,
                                         RoundedCornerShape(4.dp)
                                     )
                             )
@@ -687,7 +696,7 @@ fun ExportSettingSection() {
                             Text(
                                 text = stringResource(Res.string.batch_export_settings_how_to_description_2),
                                 fontSize = 12.sp,
-                                color = LocalCustomColors.current.settingsBodyTextColor
+                                color = LocalCustomColors.current.onSurfaceVariant
                             )
                         }
 
@@ -699,47 +708,50 @@ fun ExportSettingSection() {
                                 text = stringResource(Res.string.batch_export_settings_how_to_2),
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = LocalCustomColors.current.bodyContentColor
+                                color = LocalCustomColors.current.onSurface
                             )
 
                             Row(
                                 horizontalArrangement = Arrangement.spacedBy(4.dp)
                             ) {
+                                // Was a literal "✓" Text standing in for a checkmark icon.
                                 Box(
                                     modifier = Modifier
                                         .size(16.dp)
                                         .background(
-                                            Color(0xFFCD9777),
+                                            LocalCustomColors.current.accent,
                                             RoundedCornerShape(2.dp)
                                         ),
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    Text(
-                                        text = "✓",
-                                        fontSize = 10.sp,
-                                        color = Color.White
+                                    Icon(
+                                        imageVector = Icons.Default.Check,
+                                        contentDescription = null,
+                                        tint = LocalCustomColors.current.onAccent,
+                                        modifier = Modifier.size(10.dp)
                                     )
                                 }
                                 Box(
                                     modifier = Modifier
                                         .size(16.dp)
                                         .background(
-                                            Color(0xFFCD9777),
+                                            LocalCustomColors.current.accent,
                                             RoundedCornerShape(2.dp)
                                         ),
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    Text(
-                                        text = "✓",
-                                        fontSize = 10.sp,
-                                        color = Color.White
+                                    Icon(
+                                        imageVector = Icons.Default.Check,
+                                        contentDescription = null,
+                                        tint = LocalCustomColors.current.onAccent,
+                                        modifier = Modifier.size(10.dp)
                                     )
                                 }
 
                                 Text(
                                     text = stringResource(Res.string.batch_export_settings_how_to_description_3),
                                     fontSize = 12.sp,
-                                    color = LocalCustomColors.current.settingsBodyTextColor
+                                    color = LocalCustomColors.current.onSurfaceVariant
                                 )
                             }
                         }
@@ -752,7 +764,7 @@ fun ExportSettingSection() {
                                 text = stringResource(Res.string.batch_export_settings_how_to_3),
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = LocalCustomColors.current.bodyContentColor
+                                color = LocalCustomColors.current.onSurface
                             )
 
                             Row(
@@ -762,15 +774,15 @@ fun ExportSettingSection() {
                                     modifier = Modifier
                                         .size(16.dp)
                                         .background(
-                                            Color(0xFFCD9777),
+                                            LocalCustomColors.current.accent,
                                             RoundedCornerShape(2.dp)
                                         ),
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    androidx.compose.material.Icon(
+                                    Icon(
                                         painter = painterResource(Res.drawable.ic_export_selections),
                                         contentDescription = stringResource(Res.string.export),
-                                        tint = Color.White,
+                                        tint = LocalCustomColors.current.onAccent,
                                         modifier = Modifier.size(10.dp)
                                     )
                                 }
@@ -779,7 +791,7 @@ fun ExportSettingSection() {
                             Text(
                                 text = stringResource(Res.string.batch_export_settings_how_to_description_4),
                                 fontSize = 12.sp,
-                                color = LocalCustomColors.current.settingsBodyTextColor
+                                color = LocalCustomColors.current.onSurfaceVariant
                             )
                         }
                     }
@@ -871,9 +883,9 @@ fun SettingsModelOptionCard(
             .clickable { onClick() },
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
-            LocalCustomColors.current.modelSelectionBgColor
+            LocalCustomColors.current.surface
         ),
-        border = androidx.compose.foundation.BorderStroke(1.dp, LocalCustomColors.current.bodyContentColor)
+        border = androidx.compose.foundation.BorderStroke(1.dp, LocalCustomColors.current.outline)
     ) {
         Row(
             modifier = Modifier
@@ -888,21 +900,21 @@ fun SettingsModelOptionCard(
                     text = model.title,
                     fontSize = 18.sp,
                     fontWeight = FontWeight.SemiBold,
-                    color = LocalCustomColors.current.bodyContentColor,
+                    color = LocalCustomColors.current.onSurface,
                     modifier = Modifier.padding(bottom = 4.dp)
                 )
 
                 Text(
                     text = model.description,
                     fontSize = 14.sp,
-                    color = LocalCustomColors.current.modelSelectionDescColor,
+                    color = LocalCustomColors.current.onSurfaceVariant,
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
 
                 Text(
                     text = model.size,
                     fontSize = 14.sp,
-                    color = LocalCustomColors.current.modelSelectionDescColor
+                    color = LocalCustomColors.current.onSurfaceVariant
                 )
             }
         }

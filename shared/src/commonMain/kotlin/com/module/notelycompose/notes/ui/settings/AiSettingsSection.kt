@@ -69,7 +69,7 @@ fun AiSettingsSection(
             true -> Text(
                 text = "✓ Đã lưu API key",
                 fontSize = 13.sp,
-                color = Color(0xFF2E7D32),
+                color = LocalCustomColors.current.success,
                 modifier = Modifier.padding(bottom = 8.dp)
             )
             false -> Text(
