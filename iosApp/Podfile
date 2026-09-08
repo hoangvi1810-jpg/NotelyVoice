@@ -2,5 +2,9 @@ platform :ios, '13.0'
 use_frameworks!
 
 target 'Notely Voice' do
-  pod 'ffmpegkit-kmp-ios', '~> 0.1.0'
+  # ffmpegkit-kmp-ios removed: FFmpegKit's binaries were pulled from CocoaPods trunk when the
+  # project retired in April 2025 (`pod install` 404s on it — confirmed against the live trunk
+  # API), and it isn't actually referenced anywhere in the iOS source — the Kotlin-side
+  # dependency was already commented out in core/audio/build.gradle.kts, and
+  # IOSAudioConverter.kt uses AVFoundation/AVFAudio directly, no ffmpeg. Safe to drop.
 end
