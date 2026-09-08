@@ -5,11 +5,11 @@ package com.module.notelycompose.ai
  * app's primary transcription language is Vietnamese and the local TF-IDF summarizer
  * (see `summary/TFIDFSummarizer.kt`) has no Vietnamese support at all — this is its replacement.
  *
- * Every prompt explicitly pins the output language to Vietnamese, independent of the note's
- * actual language, since a mixed-language transcript (e.g. English terms inside Vietnamese
- * speech) should still produce Vietnamese prose. The one exception is the Classic template
- * (see [ENGLISH_LANGUAGE_INSTRUCTION]), which the user wants in natural English while every
- * other template/tab stays Vietnamese.
+ * Every prompt explicitly pins the output language, independent of the note's actual spoken
+ * language, since a mixed-language transcript (e.g. English terms inside Vietnamese speech)
+ * should still produce consistent prose. The one exception is the "AI Note" tab (all five
+ * templates, see [ENGLISH_LANGUAGE_INSTRUCTION]), which the user wants in natural English
+ * always — Highlights, Summary and title+tags stay Vietnamese.
  */
 object AiPrompts {
 
@@ -39,25 +39,25 @@ object AiPrompts {
             2. Với mỗi nhóm, đặt một tiêu đề ngắn rồi trình bày lại ý đó cho mạch lạc.
             3. Tách riêng một mục "Việc cần làm" ở cuối, liệt kê các hành động cụ thể được nhắc tới
                (kể cả khi người nói chỉ ngụ ý, chưa nói thẳng "cần làm").
-            Không bỏ sót ý nào trong bản ghi gốc. $LANGUAGE_INSTRUCTION
+            Không bỏ sót ý nào trong bản ghi gốc. $ENGLISH_LANGUAGE_INSTRUCTION
         """.trimIndent()
 
         AiTemplate.MEETING -> """
             Bạn là trợ lý ghi biên bản họp. Viết lại bản ghi âm dưới đây thành biên bản cuộc họp,
             gồm: các điểm chính đã bàn, các quyết định đã chốt, và mục hành động (ai làm gì, nếu
-            bản ghi có nhắc tới người phụ trách). $LANGUAGE_INSTRUCTION
+            bản ghi có nhắc tới người phụ trách). $ENGLISH_LANGUAGE_INSTRUCTION
         """.trimIndent()
 
         AiTemplate.LECTURE -> """
             Bạn là trợ lý ghi chú bài giảng. Viết lại bản ghi âm dưới đây thành ghi chú học tập:
             khái niệm chính, ý chính của từng phần, và các chi tiết/ví dụ bổ trợ đi kèm mỗi ý.
-            $LANGUAGE_INSTRUCTION
+            $ENGLISH_LANGUAGE_INSTRUCTION
         """.trimIndent()
 
         AiTemplate.JOURNALING -> """
             Bạn là trợ lý viết nhật ký. Viết lại bản ghi âm dưới đây thành một đoạn nhật ký có
             cấu trúc, giữ nguyên cảm xúc và thông điệp cốt lõi của người nói, chỉ chỉnh lại câu
-            cú cho mạch lạc hơn. $LANGUAGE_INSTRUCTION
+            cú cho mạch lạc hơn. $ENGLISH_LANGUAGE_INSTRUCTION
         """.trimIndent()
     }
 
