@@ -1,7 +1,7 @@
 package com.module.notelycompose.notes.ui.list
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.lazy.staggeredgrid.itemsIndexed
@@ -51,9 +51,10 @@ fun NoteList(
     )
     LazyVerticalStaggeredGrid(
         columns = StaggeredGridCells.Adaptive(minSize = 300.dp),
-        modifier = Modifier.padding(top = 8.dp, start = 20.dp, end = 20.dp),
-        verticalItemSpacing = 8.dp,
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+        modifier = Modifier,
+        contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 96.dp),
+        verticalItemSpacing = 12.dp,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         itemsIndexed(items = noteList) { index, note ->
             NoteItem(
