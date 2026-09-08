@@ -1,5 +1,6 @@
 package com.module.notelycompose.notes.ui.settings
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -18,6 +19,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
@@ -39,6 +41,7 @@ fun AiSettingsSection(
     aiRepository: AiRepository = koinInject()
 ) {
     val coroutineScope = rememberCoroutineScope()
+    val clipboardManager = LocalClipboardManager.current
     var hasKey by remember { mutableStateOf<Boolean?>(null) } // null while the initial check loads
     var apiKeyInput by remember { mutableStateOf("") }
     var model by remember { mutableStateOf(DEFAULT_OPENROUTER_MODEL) }
@@ -89,7 +92,23 @@ fun AiSettingsSection(
                 Text(if (hasKey == true) "Nhập key mới để thay thế" else "sk-or-v1-...")
             },
             singleLine = true,
-            visualTransformation = PasswordVisualTransformation()
+            visualTransformation = PasswordVisualTransformation(),
+            // Compose Multiplatform's long-press paste menu is unreliable on iOS (works fine on
+            // Android) -- a key this long is painful to type by hand, so read the clipboard
+            // directly instead of relying on the system context menu.
+            trailingIcon = {
+                Text(
+                    text = "Dán",
+                    color = LocalCustomColors.current.accent,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 14.sp,
+                    modifier = Modifier
+                        .padding(end = 12.dp)
+                        .clickable {
+                            clipboardManager.getText()?.text?.let { apiKeyInput = it.trim() }
+                        }
+                )
+            }
         )
 
         OutlinedTextField(
