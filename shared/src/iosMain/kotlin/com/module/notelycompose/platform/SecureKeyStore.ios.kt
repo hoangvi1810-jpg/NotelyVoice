@@ -46,7 +46,10 @@ actual class SecureKeyStore {
     @Suppress("UNCHECKED_CAST")
     private fun baseQuery(): NSMutableDictionary {
         val dict = NSMutableDictionary()
-        dict.setObject(kSecClassGenericPassword, forKey = CFBridgingRelease(kSecClass) as NSString)
+        dict.setObject(
+            CFBridgingRelease(kSecClassGenericPassword) as NSString,
+            forKey = CFBridgingRelease(kSecClass) as NSString
+        )
         dict.setObject(service as NSString, forKey = CFBridgingRelease(kSecAttrService) as NSString)
         dict.setObject(account as NSString, forKey = CFBridgingRelease(kSecAttrAccount) as NSString)
         return dict
@@ -55,7 +58,10 @@ actual class SecureKeyStore {
     @Suppress("UNCHECKED_CAST")
     actual fun getApiKey(): String? {
         val query = baseQuery()
-        query.setObject(kSecMatchLimitOne, forKey = CFBridgingRelease(kSecMatchLimit) as NSString)
+        query.setObject(
+            CFBridgingRelease(kSecMatchLimitOne) as NSString,
+            forKey = CFBridgingRelease(kSecMatchLimit) as NSString
+        )
         query.setObject(true, forKey = CFBridgingRelease(kSecReturnData) as NSString)
 
         return memScoped {
@@ -75,9 +81,9 @@ actual class SecureKeyStore {
         // Remove any existing entry first — SecItemAdd fails with errSecDuplicateItem otherwise.
         clearApiKey()
 
-        val data = (key as NSString).dataUsingEncoding(NSUTF8StringEncoding)
+        val data = (key as NSString).dataUsingEncoding(NSUTF8StringEncoding) ?: return
         val query = baseQuery()
-        query.setObject(data as Any, forKey = CFBridgingRelease(kSecValueData) as NSString)
+        query.setObject(data, forKey = CFBridgingRelease(kSecValueData) as NSString)
         SecItemAdd(query as CFDictionaryRef, null)
     }
 
