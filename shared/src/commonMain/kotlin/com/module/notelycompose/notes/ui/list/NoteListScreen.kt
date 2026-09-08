@@ -9,12 +9,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.FabPosition
-import androidx.compose.material.FloatingActionButton
-import androidx.compose.material.FloatingActionButtonDefaults.elevation
 import androidx.compose.material.Icon
 import androidx.compose.material.Scaffold
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import com.module.notelycompose.ui.components.NotelyFab
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -75,7 +74,7 @@ fun NoteListScreen(
             isFloatingActionButtonDocked = true,
             floatingActionButtonPosition = FabPosition.End,
             floatingActionButton = {
-                FloatingActionButton(
+                NotelyFab(
                     onClick = {
                         if(isSelectAllAction) {
                             // call function depending what was chosen
@@ -88,9 +87,7 @@ fun NoteListScreen(
                             navigateToNoteDetails("0")
                         }
 
-                    },
-                    backgroundColor = LocalCustomColors.current.backgroundViewColor,
-                    elevation = elevation(defaultElevation = 2.dp)
+                    }
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
