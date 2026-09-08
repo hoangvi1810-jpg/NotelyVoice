@@ -5,6 +5,7 @@ import androidx.compose.runtime.Immutable
 
 @Immutable
 data class CustomColors(
+    // --- Legacy fields (kept for the ~40 existing call sites; re-pointed at Palette.kt) ---
     val sortAscendingIconColor: Color,
     val backgroundViewColor: Color,
     val dateContentColorViewColor: Color,
@@ -49,5 +50,27 @@ data class CustomColors(
     val selectAllCheckboxColor: Color,
     val selectAllCancelColor: Color,
     val modelSelectionDescColor: Color,
-    val modelSelectionBgColor: Color
+    val modelSelectionBgColor: Color,
+
+    // --- New semantic roles for the purple design system (Sep 2026 redesign) ---
+    val surface: Color,
+    val surfaceElevated: Color,
+    val surfaceSunken: Color,
+    val onSurface: Color,
+    val onSurfaceVariant: Color,
+    val outline: Color,
+    val accent: Color,
+    val onAccent: Color,
+    val accentSoft: Color,
+    val chipSelectedBg: Color,
+    val chipSelectedFg: Color,
+    val chipUnselectedBg: Color,
+    val chipUnselectedFg: Color,
+    val heroGradientStart: Color,
+    val heroGradientEnd: Color,
+    val danger: Color,
+    val onDanger: Color,
+    val dangerSoft: Color,
+    val success: Color,
+    val shadowTint: Color
 )
