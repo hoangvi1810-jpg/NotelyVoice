@@ -5,11 +5,17 @@ import kotlinx.cinterop.alloc
 import kotlinx.cinterop.memScoped
 import kotlinx.cinterop.ptr
 import kotlinx.cinterop.value
-import platform.CoreFoundation.CFDictionaryRef
+import platform.CoreFoundation.CFDictionaryCreateMutable
+import platform.CoreFoundation.CFDictionarySetValue
+import platform.CoreFoundation.CFMutableDictionaryRef
+import platform.CoreFoundation.CFRelease
 import platform.CoreFoundation.CFTypeRefVar
+import platform.CoreFoundation.kCFBooleanTrue
+import platform.CoreFoundation.kCFTypeDictionaryKeyCallBacks
+import platform.CoreFoundation.kCFTypeDictionaryValueCallBacks
 import platform.Foundation.CFBridgingRelease
+import platform.Foundation.CFBridgingRetain
 import platform.Foundation.NSData
-import platform.Foundation.NSMutableDictionary
 import platform.Foundation.NSString
 import platform.Foundation.NSUTF8StringEncoding
 import platform.Foundation.create
@@ -31,11 +37,18 @@ import platform.Security.kSecValueData
  * Stores the OpenRouter API key in the iOS Keychain (kSecClassGenericPassword), never in
  * NSUserDefaults/DataStore.
  *
+ * Builds the Keychain query as a plain CFMutableDictionary instead of NSMutableDictionary:
+ * every kSec* constant is a raw, unowned CFTypeRef and is passed straight into
+ * CFDictionarySetValue (a C function taking `const void *`, no ObjC/ARC bridging involved).
+ * The only values that need ownership transfer are the ones we create ourselves
+ * (service/account strings, the key's NSData) — those go through CFBridgingRetain, which
+ * matches exactly the +1 retain that the dictionary's kCFTypeDictionaryValueCallBacks expects
+ * and later balances with its own CFRelease when an entry is removed or the dict itself is
+ * released.
+ *
  * NOTE: this file could not be compile-verified in this session (no Mac/Xcode toolchain
- * available). Kotlin/Native's CFString <-> NSString bridging for the kSec* constants is correct
- * per Apple's documented toll-free bridging, but this is the single highest-risk file in this
- * change — build it first and confirm read/write/clear against a real Keychain before relying on
- * it for anything but local testing.
+ * available) — a previous version of this file (mixing NSMutableDictionary with
+ * CFBridgingRelease on unowned kSec* constants) crashed on-device when saving a key.
  */
 @OptIn(ExperimentalForeignApi::class)
 actual class SecureKeyStore {
@@ -43,45 +56,59 @@ actual class SecureKeyStore {
     private val service = "com.module.notelycompose.openrouter"
     private val account = "api_key"
 
-    @Suppress("UNCHECKED_CAST")
-    private fun baseQuery(): NSMutableDictionary {
-        val dict = NSMutableDictionary()
-        dict.setObject(kSecClassGenericPassword, forKey = CFBridgingRelease(kSecClass) as NSString)
-        dict.setObject(service as NSString, forKey = CFBridgingRelease(kSecAttrService) as NSString)
-        dict.setObject(account as NSString, forKey = CFBridgingRelease(kSecAttrAccount) as NSString)
-        return dict
+    private fun newQuery(): CFMutableDictionaryRef {
+        val dict = CFDictionaryCreateMutable(
+            null,
+            0,
+            kCFTypeDictionaryKeyCallBacks.ptr,
+            kCFTypeDictionaryValueCallBacks.ptr
+        )
+        CFDictionarySetValue(dict, kSecClass, kSecClassGenericPassword)
+        CFDictionarySetValue(dict, kSecAttrService, CFBridgingRetain(service as NSString))
+        CFDictionarySetValue(dict, kSecAttrAccount, CFBridgingRetain(account as NSString))
+        return dict!!
     }
 
-    @Suppress("UNCHECKED_CAST")
     actual fun getApiKey(): String? {
-        val query = baseQuery()
-        query.setObject(kSecMatchLimitOne, forKey = CFBridgingRelease(kSecMatchLimit) as NSString)
-        query.setObject(true, forKey = CFBridgingRelease(kSecReturnData) as NSString)
+        val query = newQuery()
+        CFDictionarySetValue(query, kSecMatchLimit, kSecMatchLimitOne)
+        CFDictionarySetValue(query, kSecReturnData, kCFBooleanTrue)
 
-        return memScoped {
-            val result = alloc<CFTypeRefVar>()
-            val status = SecItemCopyMatching(query as CFDictionaryRef, result.ptr)
-            if (status == errSecSuccess) {
-                val data = CFBridgingRelease(result.value) as? NSData
-                data?.let { NSString.create(it, NSUTF8StringEncoding) as String? }
-            } else {
-                null
+        return try {
+            memScoped {
+                val result = alloc<CFTypeRefVar>()
+                val status = SecItemCopyMatching(query, result.ptr)
+                if (status == errSecSuccess) {
+                    val data = CFBridgingRelease(result.value) as? NSData
+                    data?.let { NSString.create(it, NSUTF8StringEncoding) as String? }
+                } else {
+                    null
+                }
             }
+        } finally {
+            CFRelease(query)
         }
     }
 
-    @Suppress("UNCHECKED_CAST")
     actual fun setApiKey(key: String) {
-        // Remove any existing entry first — SecItemAdd fails with errSecDuplicateItem otherwise.
         clearApiKey()
 
-        val data = (key as NSString).dataUsingEncoding(NSUTF8StringEncoding)
-        val query = baseQuery()
-        query.setObject(data as Any, forKey = CFBridgingRelease(kSecValueData) as NSString)
-        SecItemAdd(query as CFDictionaryRef, null)
+        val data = (key as NSString).dataUsingEncoding(NSUTF8StringEncoding) ?: return
+        val query = newQuery()
+        try {
+            CFDictionarySetValue(query, kSecValueData, CFBridgingRetain(data))
+            SecItemAdd(query, null)
+        } finally {
+            CFRelease(query)
+        }
     }
 
     actual fun clearApiKey() {
-        SecItemDelete(baseQuery() as CFDictionaryRef)
+        val query = newQuery()
+        try {
+            SecItemDelete(query)
+        } finally {
+            CFRelease(query)
+        }
     }
 }
