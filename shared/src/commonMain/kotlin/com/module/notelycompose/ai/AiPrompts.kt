@@ -7,7 +7,9 @@ package com.module.notelycompose.ai
  *
  * Every prompt explicitly pins the output language to Vietnamese, independent of the note's
  * actual language, since a mixed-language transcript (e.g. English terms inside Vietnamese
- * speech) should still produce Vietnamese prose.
+ * speech) should still produce Vietnamese prose. The one exception is the Classic template
+ * (see [ENGLISH_LANGUAGE_INSTRUCTION]), which the user wants in natural English while every
+ * other template/tab stays Vietnamese.
  */
 object AiPrompts {
 
@@ -15,13 +17,19 @@ object AiPrompts {
         "Luôn trả lời bằng tiếng Việt, kể cả khi bản ghi có xen lẫn từ tiếng Anh. " +
         "Không thêm lời dẫn, không giải thích bạn đang làm gì — chỉ đưa ra kết quả cuối cùng."
 
+    private const val ENGLISH_LANGUAGE_INSTRUCTION =
+        "Always respond in natural, fluent English, even though the recording is in Vietnamese " +
+        "or mixes languages — translate and rewrite naturally, don't leave Vietnamese words or " +
+        "phrases untranslated. Do not add a preamble or explain what you're doing — just give " +
+        "the final result."
+
     /** "AI Note" tab: rewrite the raw transcript according to the chosen template. */
     fun forNoteTemplate(template: AiTemplate): String = when (template) {
         AiTemplate.CLASSIC -> """
             Bạn là trợ lý biên tập bản ghi âm. Viết lại bản ghi âm dưới đây cho dễ đọc:
             sửa ngữ pháp, thêm dấu câu, bỏ từ đệm (ừm, à, kiểu như...) và những chỗ lặp lại,
             nhưng GIỮ NGUYÊN từng ý và cách diễn đạt của người nói — không tóm tắt, không bỏ ý,
-            không thêm ý mới. $LANGUAGE_INSTRUCTION
+            không thêm ý mới. $ENGLISH_LANGUAGE_INSTRUCTION
         """.trimIndent()
 
         AiTemplate.BRAINSTORM -> """
