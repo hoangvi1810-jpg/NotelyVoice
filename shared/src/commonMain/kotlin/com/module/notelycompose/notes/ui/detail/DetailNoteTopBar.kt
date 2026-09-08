@@ -4,17 +4,19 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.material.AppBarDefaults
-import androidx.compose.material.DropdownMenu
-import androidx.compose.material.DropdownMenuItem
-import androidx.compose.material.Icon
-import androidx.compose.material.IconButton
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Text
-import androidx.compose.material.TopAppBar
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.MoreVert
@@ -26,7 +28,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.module.notelycompose.notes.ui.theme.LocalCustomColors
 import com.module.notelycompose.platform.getPlatform
@@ -37,6 +38,7 @@ import com.module.notelycompose.resources.ic_cancel_all
 import com.module.notelycompose.resources.ic_copy
 import com.module.notelycompose.resources.top_bar_back
 import com.module.notelycompose.resources.top_bar_export_audio_folder
+import com.module.notelycompose.resources.top_bar_export_as_markdown
 import com.module.notelycompose.resources.top_bar_import_audio
 import com.module.notelycompose.resources.top_bar_my_note
 import com.module.notelycompose.resources.top_bar_export_as_txt
@@ -137,6 +139,7 @@ fun DetailNoteTopBar(
     )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DetailAndroidNoteTopBar(
     title: String,
@@ -148,16 +151,17 @@ fun DetailAndroidNoteTopBar(
     onImportVideoClick: () -> Unit,
     onExportTextAsTxt: () -> Unit,
     onExportTextAsPDF: () -> Unit,
-    onExportTextAsMarkdown: () -> Unit = {},
-    elevation: Dp = AppBarDefaults.TopAppBarElevation
+    onExportTextAsMarkdown: () -> Unit = {}
 ) {
+    val colors = LocalCustomColors.current
     TopAppBar(
-        title = { Text(title) },
+        title = { Text(title, style = MaterialTheme.typography.titleLarge, color = colors.onSurface) },
         navigationIcon = {
             IconButton(onClick = { onNavigateBack() }) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = stringResource(Res.string.top_bar_back)
+                    contentDescription = stringResource(Res.string.top_bar_back),
+                    tint = colors.onSurface
                 )
             }
         },
@@ -166,6 +170,7 @@ fun DetailAndroidNoteTopBar(
                 Icon(
                     painter = painterResource(Res.drawable.ic_copy),
                     contentDescription = stringResource(Res.string.copy),
+                    tint = colors.onSurfaceVariant,
                     modifier = Modifier.size(24.dp)
                 )
             }
@@ -173,7 +178,8 @@ fun DetailAndroidNoteTopBar(
             IconButton(onClick = { onShare() }) {
                 Icon(
                     imageVector = Icons.Filled.Share,
-                    contentDescription = "Share note"
+                    contentDescription = "Share note",
+                    tint = colors.onSurfaceVariant
                 )
             }
             // Hide dropdown menu
@@ -186,12 +192,17 @@ fun DetailAndroidNoteTopBar(
                 onExportTextAsMarkdown = onExportTextAsMarkdown
             )
         },
-        backgroundColor = LocalCustomColors.current.bodyBackgroundColor,
-        contentColor = LocalCustomColors.current.bodyContentColor,
-        elevation = elevation
+        colors = TopAppBarDefaults.topAppBarColors(
+            containerColor = colors.bodyBackgroundColor,
+            titleContentColor = colors.onSurface,
+            navigationIconContentColor = colors.onSurface,
+            actionIconContentColor = colors.onSurfaceVariant
+        ),
+        windowInsets = WindowInsets(0)
     )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DetailIOSNoteTopBar(
     onNavigateBack: () -> Unit,
@@ -204,6 +215,7 @@ fun DetailIOSNoteTopBar(
     onExportTextAsMarkdown: () -> Unit = {},
     onShare: () -> Unit
 ) {
+    val colors = LocalCustomColors.current
     TopAppBar(
         title = {
             Row(
@@ -220,7 +232,7 @@ fun DetailIOSNoteTopBar(
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     text = stringResource(Res.string.top_bar_back),
-                    style = MaterialTheme.typography.body1,
+                    style = MaterialTheme.typography.bodyLarge,
                 )
             }
         },
@@ -232,7 +244,7 @@ fun DetailIOSNoteTopBar(
                     modifier = Modifier.size(24.dp)
                 )
             }
-            
+
             IconButton(onClick = { onShare() }) {
                 Icon(
                     imageVector = Icons.Filled.Share,
@@ -249,10 +261,14 @@ fun DetailIOSNoteTopBar(
                 onExportTextAsMarkdown = onExportTextAsMarkdown
             )
         },
-        contentColor = LocalCustomColors.current.iOSBackButtonColor,
-        backgroundColor = LocalCustomColors.current.bodyBackgroundColor,
+        colors = TopAppBarDefaults.topAppBarColors(
+            containerColor = colors.bodyBackgroundColor,
+            titleContentColor = colors.iOSBackButtonColor,
+            navigationIconContentColor = colors.iOSBackButtonColor,
+            actionIconContentColor = colors.iOSBackButtonColor
+        ),
         modifier = Modifier.padding(start = 0.dp),
-        elevation = 0.dp
+        windowInsets = WindowInsets(0)
     )
 }
 
@@ -266,11 +282,13 @@ fun DetailDropDownMenu(
     onExportTextAsMarkdown: () -> Unit = {}
 ) {
     var dropdownExpanded by remember { mutableStateOf(false) }
+    val colors = LocalCustomColors.current
     Box {
         IconButton(onClick = { dropdownExpanded = true }) {
             Icon(
                 imageVector = Icons.Filled.MoreVert,
-                contentDescription = "More options"
+                contentDescription = "More options",
+                tint = colors.onSurfaceVariant
             )
         }
 
@@ -280,61 +298,52 @@ fun DetailDropDownMenu(
             modifier = Modifier.padding(vertical = 0.dp)
         ) {
             DropdownMenuItem(
+                text = { Text(stringResource(Res.string.top_bar_import_audio)) },
                 onClick = {
                     dropdownExpanded = false
                     onImportClick()
                 }
-            ) {
-                Text(stringResource(Res.string.top_bar_import_audio))
-            }
+            )
 
             DropdownMenuItem(
+                text = { Text(stringResource(Res.string.top_bar_import_video)) },
                 onClick = {
                     dropdownExpanded = false
                     onImportVideoClick()
                 }
-            ) {
-                Text(stringResource(Res.string.top_bar_import_video))
-            }
+            )
 
             DropdownMenuItem(
+                text = { Text(stringResource(Res.string.top_bar_export_audio_folder)) },
                 onClick = {
                     dropdownExpanded = false
                     onExportAudio()
                 }
-            ) {
-                Text(stringResource(Res.string.top_bar_export_audio_folder))
-            }
+            )
 
             DropdownMenuItem(
+                text = { Text(stringResource(Res.string.top_bar_export_as_txt)) },
                 onClick = {
                     dropdownExpanded = false
                     onExportTextAsTxt()
                 }
-            ) {
-                Text(stringResource(Res.string.top_bar_export_as_txt))
-            }
+            )
 
             DropdownMenuItem(
+                text = { Text(stringResource(Res.string.top_bar_export_as_pdf)) },
                 onClick = {
                     dropdownExpanded = false
                     onExportTextAsPDF()
                 }
-            ) {
-                Text(stringResource(Res.string.top_bar_export_as_pdf))
-            }
+            )
 
             DropdownMenuItem(
+                text = { Text(stringResource(Res.string.top_bar_export_as_markdown)) },
                 onClick = {
                     dropdownExpanded = false
                     onExportTextAsMarkdown()
                 }
-            ) {
-                // Not a stringResource() like the items above: adding a new resource key here
-                // needs the compose.resources codegen to run once in Gradle to verify, which
-                // wasn't available in this environment — hardcoded as a plain string instead.
-                Text("Export as Markdown")
-            }
+            )
         }
     }
 }

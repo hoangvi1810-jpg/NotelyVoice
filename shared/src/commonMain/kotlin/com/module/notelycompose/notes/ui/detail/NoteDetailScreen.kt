@@ -6,7 +6,6 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,7 +17,6 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
@@ -28,8 +26,6 @@ import androidx.compose.material.Button
 import androidx.compose.material.DismissDirection
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.FabPosition
-import androidx.compose.material.FloatingActionButton
-import androidx.compose.material.FloatingActionButtonDefaults.elevation
 import androidx.compose.material.Icon
 import androidx.compose.material.Scaffold
 import androidx.compose.material.SwipeToDismiss
@@ -81,6 +77,7 @@ import com.module.notelycompose.notes.presentation.detail.NoteAiViewModel
 import com.module.notelycompose.notes.presentation.detail.TextEditorViewModel
 import com.module.notelycompose.notes.ui.share.ShareDialog
 import com.module.notelycompose.notes.ui.theme.LocalCustomColors
+import com.module.notelycompose.ui.components.NotelyFab
 import com.module.notelycompose.platform.presentation.PlatformViewModel
 import com.module.notelycompose.resources.Res
 import com.module.notelycompose.resources.confirmation_cancel
@@ -237,20 +234,17 @@ fun NoteDetailScreen(
                         enter = fadeIn() + slideInVertically(initialOffsetY = { it }),
                         exit = fadeOut() + slideOutVertically(targetOffsetY = { it })
                     ) {
-                        FloatingActionButton(
-                            modifier = Modifier.border(
-                                width = 1.dp,
-                                color = LocalCustomColors.current.floatActionButtonBorderColor,
-                                shape = CircleShape
-                            ),
-                            backgroundColor = LocalCustomColors.current.bodyBackgroundColor,
+                        NotelyFab(
                             onClick = { downloaderViewModel.checkTranscriptionAvailability() },
-                            elevation = elevation(defaultElevation = 2.dp)
+                            containerColor = LocalCustomColors.current.surface,
+                            contentColor = LocalCustomColors.current.onSurfaceVariant,
+                            size = 48.dp,
+                            cornerRadius = 24.dp
                         ) {
                             Icon(
                                 painter = painterResource(Res.drawable.ic_transcription),
                                 contentDescription = stringResource(Res.string.transcription_icon),
-                                tint = LocalCustomColors.current.bodyContentColor
+                                tint = LocalCustomColors.current.onSurfaceVariant
                             )
                         }
                     }
@@ -261,13 +255,7 @@ fun NoteDetailScreen(
                     enter = fadeIn() + slideInVertically(initialOffsetY = { it }),
                     exit = fadeOut() + slideOutVertically(targetOffsetY = { it })
                 ) {
-                    FloatingActionButton(
-                        modifier = Modifier.border(
-                            width = 1.dp,
-                            color = LocalCustomColors.current.floatActionButtonBorderColor,
-                            shape = CircleShape
-                        ),
-                        backgroundColor = LocalCustomColors.current.bodyBackgroundColor,
+                    NotelyFab(
                         onClick = {
                             if (!editorState.recording.isRecordingExist) {
                                 navigateToRecorder("$currentNoteId")
@@ -275,12 +263,13 @@ fun NoteDetailScreen(
                                 showExistingRecordConfirmDialog = true
                             }
                         },
-                        elevation = elevation(defaultElevation = 2.dp)
+                        size = 56.dp,
+                        cornerRadius = 28.dp
                     ) {
                         Icon(
                             imageVector = Images.Icons.IcRecorder,
                             contentDescription = stringResource(Res.string.note_detail_recorder),
-                            tint = LocalCustomColors.current.bodyContentColor
+                            tint = LocalCustomColors.current.onAccent
                         )
                     }
                 }
@@ -307,6 +296,7 @@ fun NoteDetailScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
+                .background(LocalCustomColors.current.bodyBackgroundColor)
         ) {
             NoteDetailTabRow(
                 selectedTab = selectedTab,
@@ -505,20 +495,26 @@ private fun NoteContent(
                     state = dismissState,
                     directions = setOf(DismissDirection.EndToStart),
                     background = {
-                        // Background that appears when swiping
+                        // Background that appears when swiping. Was `.width(800.dp)` — a
+                        // hardcoded overflow that pushed the delete icon off past the visible
+                        // edge. The horizontal padding here must match PlatformAudioPlayerUi's own
+                        // outer padding (16dp) — otherwise this background (edge-to-edge) peeks out
+                        // past the narrower audio-player card at rest, which is exactly what
+                        // happened on-device before this padding was added.
                         Box(
                             modifier = Modifier
-                                .width(800.dp)
-                                .height(36.dp)
-                                .padding(horizontal = 16.dp, vertical = 0.dp)
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(Color.Red),
+                                .fillMaxWidth()
+                                .height(48.dp)
+                                .padding(horizontal = 16.dp)
+                                .clip(RoundedCornerShape(20.dp))
+                                .background(LocalCustomColors.current.danger),
                             contentAlignment = Alignment.CenterEnd
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Delete,
                                 contentDescription = "Delete",
-                                tint = Color.White
+                                tint = LocalCustomColors.current.onDanger,
+                                modifier = Modifier.padding(end = 16.dp)
                             )
                         }
                     },
@@ -567,7 +563,7 @@ private fun DateHeader(dateString: String) {
         text = dateString,
         modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp),
         fontSize = 12.sp,
-        color = LocalCustomColors.current.bodyContentColor
+        color = LocalCustomColors.current.onSurfaceVariant
     )
 }
 
@@ -629,11 +625,15 @@ private fun NoteEditor(
                     onFocusChange(it.isFocused)
                 },
         textStyle = TextStyle(
-            color = LocalCustomColors.current.bodyContentColor,
+            color = LocalCustomColors.current.onSurface,
             textAlign = editorState.textAlign,
-            fontSize = editorState.bodyTextSize.sp
+            fontSize = editorState.bodyTextSize.sp,
+            // A fixed lineHeight on a TextStyle whose fontSize is user-adjustable clips/overlaps
+            // at large sizes; scale it with fontSize instead. (Previously worked by accident
+            // because there was no lineHeight set at all.)
+            lineHeight = (editorState.bodyTextSize * 1.5f).sp
         ),
-        cursorBrush = SolidColor(LocalCustomColors.current.bodyContentColor),
+        cursorBrush = SolidColor(LocalCustomColors.current.accent),
         readOnly = showFormatBar,
         keyboardOptions = KeyboardOptions(
             capitalization = KeyboardCapitalization.Sentences

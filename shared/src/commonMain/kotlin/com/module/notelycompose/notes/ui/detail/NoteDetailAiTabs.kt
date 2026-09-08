@@ -1,45 +1,58 @@
 package com.module.notelycompose.notes.ui.detail
 
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.Button
-import androidx.compose.material.ButtonDefaults
-import androidx.compose.material.CircularProgressIndicator
-import androidx.compose.material.Icon
-import androidx.compose.material.IconButton
-import androidx.compose.material.Text
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.module.notelycompose.ai.AiTemplate
 import com.module.notelycompose.notes.presentation.detail.NoteAiUiState
+import com.module.notelycompose.notes.ui.theme.AppRadii
+import com.module.notelycompose.notes.ui.theme.Elevation
 import com.module.notelycompose.notes.ui.theme.LocalCustomColors
+import com.module.notelycompose.notes.ui.theme.softShadow
 
 /** The four tabs shown on the note detail screen, mirroring AI Note / Highlights / Summary /
  * Transcript from the reference app. TRANSCRIPT renders the existing editable [NoteEditor] as-is
@@ -67,42 +80,76 @@ private fun AiTemplate.description(): String = when (this) {
     AiTemplate.JOURNALING -> "Nhật ký có cấu trúc, giữ nguyên cảm xúc và thông điệp"
 }
 
+/**
+ * The segmented AI/Highlights/Summary/Transcript control. Previously the selected tab was just a
+ * flat color swap with no elevation, which read as flat; now a white pill slides under the
+ * selected label with a soft shadow, closer to the reference design's tab treatment.
+ */
 @Composable
 fun NoteDetailTabRow(
     selectedTab: NoteDetailTab,
     onTabSelected: (NoteDetailTab) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Row(
+    val colors = LocalCustomColors.current
+    val tabs = NoteDetailTab.entries
+    val selectedIndex = tabs.indexOf(selectedTab)
+
+    // NOTE: BoxWithConstraints is built on SubcomposeLayout, which throws at runtime if asked
+    // for intrinsic measurements (Modifier.height(IntrinsicSize.Min) et al) -- crashed on-device
+    // when first tried here. Use a fixed height on both the pill and the row instead.
+    val tabRowHeight = 44.dp
+    BoxWithConstraints(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 8.dp)
-            .clip(RoundedCornerShape(20.dp))
-            .background(LocalCustomColors.current.noteListBackgroundColor)
-            .padding(4.dp),
-        horizontalArrangement = Arrangement.SpaceBetween
+            .clip(RoundedCornerShape(22.dp))
+            .background(colors.surfaceSunken)
+            .padding(4.dp)
     ) {
-        NoteDetailTab.entries.forEach { tab ->
-            val selected = tab == selectedTab
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(
-                        if (selected) LocalCustomColors.current.bodyBackgroundColor
-                        else Color.Transparent
+        val tabWidth = maxWidth / tabs.size
+        val pillOffset by animateDpAsState(
+            targetValue = tabWidth * selectedIndex,
+            animationSpec = tween(220),
+            label = "tabPillOffset"
+        )
+
+        Box(
+            modifier = Modifier
+                .offset(x = pillOffset)
+                .width(tabWidth)
+                .height(tabRowHeight)
+                .softShadow(Elevation.card, cornerRadius = 18.dp)
+                .clip(RoundedCornerShape(18.dp))
+                .background(colors.surface)
+        )
+
+        Row(
+            modifier = Modifier.fillMaxWidth().height(tabRowHeight),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            tabs.forEach { tab ->
+                val selected = tab == selectedTab
+                val interactionSource = remember { MutableInteractionSource() }
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                        .clip(RoundedCornerShape(18.dp))
+                        .clickable(
+                            interactionSource = interactionSource,
+                            indication = null
+                        ) { onTabSelected(tab) },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = tab.label,
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
+                        color = if (selected) colors.onSurface else colors.onSurfaceVariant,
+                        maxLines = 1
                     )
-                    .clickable { onTabSelected(tab) }
-                    .padding(vertical = 8.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = tab.label,
-                    fontSize = 13.sp,
-                    fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
-                    color = LocalCustomColors.current.bodyContentColor,
-                    maxLines = 1
-                )
+                }
             }
         }
     }
@@ -116,6 +163,7 @@ fun NoteDetailTemplateBar(
     isLoading: Boolean,
     modifier: Modifier = Modifier
 ) {
+    val colors = LocalCustomColors.current
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -125,8 +173,8 @@ fun NoteDetailTemplateBar(
     ) {
         Text(
             text = "${template.displayName()} Template",
-            fontSize = 12.sp,
-            color = LocalCustomColors.current.settingsBodyTextColor,
+            style = MaterialTheme.typography.labelMedium,
+            color = colors.onSurfaceVariant,
             modifier = Modifier.clickable(onClick = onOpenTemplatePicker)
         )
         IconButton(onClick = onRegenerate, modifier = Modifier.height(28.dp)) {
@@ -134,13 +182,13 @@ fun NoteDetailTemplateBar(
                 CircularProgressIndicator(
                     modifier = Modifier.height(16.dp),
                     strokeWidth = 2.dp,
-                    color = LocalCustomColors.current.selectAllCheckboxColor
+                    color = colors.accent
                 )
             } else {
                 Icon(
                     imageVector = Icons.Default.Refresh,
                     contentDescription = "Tạo lại",
-                    tint = LocalCustomColors.current.selectAllCheckboxColor
+                    tint = colors.accent
                 )
             }
         }
@@ -155,6 +203,7 @@ fun AiGeneratedContentArea(
     onDismissError: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val colors = LocalCustomColors.current
     val text = when (tab) {
         NoteDetailTab.AI_NOTE -> uiState.aiNote
         NoteDetailTab.HIGHLIGHTS -> uiState.highlights
@@ -171,20 +220,20 @@ fun AiGeneratedContentArea(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(Color(0xFFFBEAEA))
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(colors.dangerSoft)
                     .padding(12.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
                     text = message,
-                    fontSize = 13.sp,
-                    color = Color(0xFFB3261E),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = colors.danger,
                     modifier = Modifier.weight(1f)
                 )
                 IconButton(onClick = onDismissError) {
-                    Icon(Icons.Default.Close, contentDescription = "Đóng", tint = Color(0xFFB3261E))
+                    Icon(Icons.Default.Close, contentDescription = "Đóng", tint = colors.danger)
                 }
             }
             Spacer(modifier = Modifier.height(12.dp))
@@ -197,12 +246,12 @@ fun AiGeneratedContentArea(
                     contentAlignment = Alignment.Center
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        CircularProgressIndicator(color = LocalCustomColors.current.selectAllCheckboxColor)
+                        CircularProgressIndicator(color = colors.accent)
                         Spacer(modifier = Modifier.height(12.dp))
                         Text(
                             text = "Đang tạo nội dung...",
-                            fontSize = 13.sp,
-                            color = LocalCustomColors.current.settingsBodyTextColor
+                            style = MaterialTheme.typography.bodySmall,
+                            color = colors.onSurfaceVariant
                         )
                     }
                 }
@@ -216,18 +265,19 @@ fun AiGeneratedContentArea(
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
                             text = "Chưa có nội dung.\nNhấn nút bên dưới để AI tạo từ bản ghi.",
-                            fontSize = 13.sp,
+                            style = MaterialTheme.typography.bodySmall,
                             textAlign = TextAlign.Center,
-                            color = LocalCustomColors.current.settingsBodyTextColor
+                            color = colors.onSurfaceVariant
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                         Button(
                             onClick = onGenerate,
                             colors = ButtonDefaults.buttonColors(
-                                backgroundColor = LocalCustomColors.current.selectAllCheckboxColor
+                                containerColor = colors.accent,
+                                contentColor = colors.onAccent
                             )
                         ) {
-                            Text(text = "Tạo với AI", color = Color.White)
+                            Text(text = "Tạo với AI")
                         }
                     }
                 }
@@ -238,26 +288,27 @@ fun AiGeneratedContentArea(
                     if (tab == NoteDetailTab.HIGHLIGHTS) {
                         text.lines().filter { it.isNotBlank() }.forEach { line ->
                             Row(modifier = Modifier.padding(vertical = 6.dp)) {
-                                Text(
-                                    text = "•  ",
-                                    color = LocalCustomColors.current.bodyContentColor,
-                                    fontSize = 15.sp
+                                Box(
+                                    modifier = Modifier
+                                        .padding(top = 8.dp, end = 10.dp)
+                                        .size(6.dp)
+                                        .clip(CircleShape)
+                                        .background(colors.accent)
                                 )
                                 Text(
                                     text = renderSimpleMarkdownBold(
                                         line.removePrefix("-").removePrefix("•").trim()
                                     ),
-                                    color = LocalCustomColors.current.bodyContentColor,
-                                    fontSize = 15.sp
+                                    color = colors.onSurface,
+                                    style = MaterialTheme.typography.bodyMedium
                                 )
                             }
                         }
                     } else {
                         Text(
                             text = text,
-                            color = LocalCustomColors.current.bodyContentColor,
-                            fontSize = 15.sp,
-                            lineHeight = 22.sp,
+                            color = colors.onSurface,
+                            style = MaterialTheme.typography.bodyMedium,
                             modifier = Modifier.padding(vertical = 12.dp)
                         )
                     }
@@ -288,12 +339,13 @@ fun NoteTemplateBottomSheet(
     onSelectTemplate: (AiTemplate) -> Unit,
     onDismiss: () -> Unit
 ) {
+    val colors = LocalCustomColors.current
     Dialog(onDismissRequest = onDismiss) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(20.dp))
-                .background(LocalCustomColors.current.bodyBackgroundColor)
+                .clip(RoundedCornerShape(28.dp))
+                .background(colors.surface)
                 .padding(20.dp)
         ) {
             Row(
@@ -303,15 +355,14 @@ fun NoteTemplateBottomSheet(
             ) {
                 Text(
                     text = "Note Template",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = LocalCustomColors.current.bodyContentColor
+                    style = MaterialTheme.typography.titleLarge,
+                    color = colors.onSurface
                 )
                 IconButton(onClick = onDismiss) {
                     Icon(
                         imageVector = Icons.Default.Close,
                         contentDescription = "Đóng",
-                        tint = LocalCustomColors.current.bodyContentColor
+                        tint = colors.onSurface
                     )
                 }
             }
@@ -337,18 +388,18 @@ private fun NoteTemplateOptionRow(
     selected: Boolean,
     onClick: () -> Unit
 ) {
-    val accent = LocalCustomColors.current.selectAllCheckboxColor
+    val colors = LocalCustomColors.current
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(14.dp))
+            .clip(AppRadii.shapeMd)
             .background(
-                if (selected) accent.copy(alpha = 0.12f)
-                else LocalCustomColors.current.noteListBackgroundColor
+                if (selected) colors.accentSoft
+                else colors.surfaceSunken
             )
             .then(
                 if (selected) {
-                    Modifier.border(2.dp, accent, RoundedCornerShape(14.dp))
+                    Modifier.border(1.5.dp, colors.accent, AppRadii.shapeMd)
                 } else {
                     Modifier
                 }
@@ -360,19 +411,18 @@ private fun NoteTemplateOptionRow(
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = template.displayName(),
-                fontSize = 15.sp,
-                fontWeight = FontWeight.Bold,
-                color = LocalCustomColors.current.bodyContentColor
+                style = MaterialTheme.typography.titleSmall,
+                color = colors.onSurface
             )
             Spacer(modifier = Modifier.height(2.dp))
             Text(
                 text = template.description(),
-                fontSize = 12.sp,
-                color = LocalCustomColors.current.settingsBodyTextColor
+                style = MaterialTheme.typography.labelMedium,
+                color = colors.onSurfaceVariant
             )
         }
         if (selected) {
-            Icon(imageVector = Icons.Default.Check, contentDescription = null, tint = accent)
+            Icon(imageVector = Icons.Default.Check, contentDescription = null, tint = colors.accent)
         }
     }
 }

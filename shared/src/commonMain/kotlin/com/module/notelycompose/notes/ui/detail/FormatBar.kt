@@ -67,7 +67,7 @@ fun FormatBar(
                         )
                         Icon(
                             imageVector = Icons.Outlined.Settings,
-                            tint = Color.DarkGray,
+                            tint = LocalCustomColors.current.onSurfaceVariant,
                             modifier = Modifier
                                 .size(24.dp)
                                 .clickable {
@@ -129,20 +129,19 @@ private fun FormatOption(
     isSelected: Boolean,
     onClick: () -> Unit
 ) {
+    val colors = LocalCustomColors.current
     Text(
         text = format.title,
         modifier = Modifier
             .clip(RoundedCornerShape(8.dp))
             .background(
-                if (isSelected) Color(0xFFE4B441)
+                if (isSelected) colors.accent
                 else Color.Transparent
             )
             .padding(horizontal = 12.dp, vertical = 8.dp)
-            .clickable(
-                onClick = onClick,
-                indication = null,
-                interactionSource = remember { MutableInteractionSource() }
-            ),
+            // Was indication = null with no replacement — a literally dead-feeling tap target.
+            // Falls back to LocalIndication (WaterDropIndication) now that it's not suppressed.
+            .clickable(onClick = onClick),
         fontSize = when (format) {
             FormatOptionTextFormat.Title -> 20.sp
             FormatOptionTextFormat.Heading -> 18.sp
@@ -156,9 +155,9 @@ private fun FormatOption(
             FormatOptionTextFormat.Body -> FontWeight.Normal
         },
         color = if (isSelected) {
-            Color.White
+            colors.onAccent
         } else {
-            Color.Black
+            colors.onSurface
         }
     )
 }

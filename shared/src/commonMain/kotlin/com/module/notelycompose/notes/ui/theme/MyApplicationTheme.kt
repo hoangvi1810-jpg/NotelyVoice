@@ -18,16 +18,28 @@ import androidx.compose.ui.unit.sp
 // M2 primary/secondary, kept alive only for the files not yet migrated to M3 (see the plan's
 // "hybrid, not a wholesale migration" decision) — re-pointed at the same Palette.kt as everything
 // else so the two theme systems cannot drift the way M2 defaults and the old beige palette did.
+// background/surface are set explicitly too: M2's lightColors()/darkColors() default them to
+// plain white/near-black, which leaks through any M2 Scaffold/Surface that doesn't paint its own
+// background Modifier (found the hard way — NoteDetailScreen.kt's tab content Column showed stock
+// white instead of the lavender canvas until this was added).
 private val LightColorPaletteM2 = lightColors(
     primary = Palette.Violet600,
     primaryVariant = Palette.Violet700,
-    secondary = Palette.Violet500
+    secondary = Palette.Violet500,
+    background = Palette.Violet050,
+    surface = Palette.White,
+    onBackground = Palette.Ink900,
+    onSurface = Palette.Ink900
 )
 
 private val DarkColorPaletteM2 = darkColors(
     primary = Palette.DarkAccent,
     primaryVariant = Palette.Violet700,
-    secondary = Palette.DarkAccent
+    secondary = Palette.DarkAccent,
+    background = Palette.DarkBackground,
+    surface = Palette.DarkSurface,
+    onBackground = Palette.DarkOnSurface,
+    onSurface = Palette.DarkOnSurface
 )
 
 /**

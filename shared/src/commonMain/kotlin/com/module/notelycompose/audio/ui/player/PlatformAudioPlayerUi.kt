@@ -5,40 +5,35 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.module.notelycompose.audio.ui.formatTimeToHHMMSS
 import com.module.notelycompose.audio.ui.player.model.AudioPlayerUiState
 import com.module.notelycompose.audio.ui.uicomponents.Thumb
 import com.module.notelycompose.audio.ui.uicomponents.Track
 import com.module.notelycompose.notes.ui.theme.LocalCustomColors
-import com.module.notelycompose.resources.style.LayoutGuide
 import com.module.notelycompose.resources.vectors.IcPause
 import com.module.notelycompose.resources.vectors.Images
 import com.module.notelycompose.resources.Res
@@ -61,46 +56,48 @@ fun PlatformAudioPlayerUi(
         onLoadAudio(filePath)
     }
 
+    val colors = LocalCustomColors.current
+
     Box(
         modifier = Modifier
-            .width(800.dp)
+            // Was `.width(800.dp)` -- a hardcoded overflow that also exposed the swipe-to-delete
+            // background's red at both edges since this box never actually spanned the full row.
+            .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 0.dp)
-            .clip(RoundedCornerShape(8.dp))
-            .background(LocalCustomColors.current.playerBoxBackgroundColor)
+            .clip(RoundedCornerShape(20.dp))
+            .background(colors.surfaceSunken)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(36.dp),
+                .padding(horizontal = 8.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-
-            Box(modifier = Modifier.padding(horizontal = 4.dp)) {
-                IconButton(
-                    onClick = { onTogglePlayPause() },
-                    modifier = Modifier.size(28.dp),
-                    enabled = uiState.isLoaded
-                ) {
-                    Icon(
-                        imageVector = if (uiState.isPlaying) Images.Icons.IcPause else Icons.Filled.PlayArrow,
-                        contentDescription = if (uiState.isPlaying) {
-                            stringResource(Res.string.player_ui_pause)
-                        } else {
-                            stringResource(Res.string.player_ui_play)
-                        },
-                        modifier = Modifier.size(28.dp),
-                        tint = if (uiState.isLoaded) Color.DarkGray else Color.LightGray
-                    )
-                }
+            IconButton(
+                onClick = { onTogglePlayPause() },
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(CircleShape)
+                    .background(if (uiState.isLoaded) colors.accent else colors.outline),
+                enabled = uiState.isLoaded
+            ) {
+                Icon(
+                    imageVector = if (uiState.isPlaying) Images.Icons.IcPause else Icons.Filled.PlayArrow,
+                    contentDescription = if (uiState.isPlaying) {
+                        stringResource(Res.string.player_ui_pause)
+                    } else {
+                        stringResource(Res.string.player_ui_play)
+                    },
+                    modifier = Modifier.size(22.dp),
+                    tint = colors.onAccent
+                )
             }
 
-            Box(modifier = Modifier.padding(horizontal = 4.dp)) {
+            Box(modifier = Modifier.padding(horizontal = 8.dp)) {
                 Text(
                     text = uiState.currentPosition.formatTimeToHHMMSS(),
-                    color = Color.DarkGray,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Medium,
-                    modifier = Modifier.padding(start = 2.dp, end = 4.dp)
+                    color = colors.onSurfaceVariant,
+                    style = MaterialTheme.typography.labelMedium
                 )
             }
 
@@ -116,17 +113,15 @@ fun PlatformAudioPlayerUi(
                 )
             }
 
-            Box(modifier = Modifier.padding(horizontal = 4.dp)) {
+            Box(modifier = Modifier.padding(horizontal = 8.dp)) {
                 Text(
                     text = if (uiState.duration > 0) {
                         uiState.duration.formatTimeToHHMMSS()
                     } else {
                         stringResource(Res.string.player_ui_initial_time)
                     },
-                    color = Color.DarkGray,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Medium,
-                    modifier = Modifier.padding(horizontal = 4.dp)
+                    color = colors.onSurfaceVariant,
+                    style = MaterialTheme.typography.labelMedium
                 )
             }
         }
@@ -144,6 +139,7 @@ fun AudioSlider(
     onSeekTo: (position: Int) -> Unit,
     onTogglePlayPause: () -> Unit
 ) {
+    val colors = LocalCustomColors.current
     var sliderPosition by remember { mutableStateOf<Float?>(null) }
     val interactionSource = remember { MutableInteractionSource() }
 
@@ -157,7 +153,7 @@ fun AudioSlider(
             Thumb(
                 interactionSource = interactionSource,
                 colors = SliderDefaults.colors(
-                    thumbColor = LocalCustomColors.current.activeThumbTrackColor,
+                    thumbColor = colors.accent,
                 ),
                 thumbSize = DpSize(width = 16.dp, height = 16.dp)
             )
@@ -166,8 +162,8 @@ fun AudioSlider(
             Track(
                 sliderState = state,
                 colors = SliderDefaults.colors(
-                    activeTrackColor = LocalCustomColors.current.activeThumbTrackColor,
-                    inactiveTrackColor = Color.LightGray
+                    activeTrackColor = colors.accent,
+                    inactiveTrackColor = colors.outline
                 )
             )
         },
@@ -182,4 +178,3 @@ fun AudioSlider(
         interactionSource = interactionSource
     )
 }
-

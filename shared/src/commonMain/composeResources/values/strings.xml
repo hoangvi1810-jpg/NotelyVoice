@@ -18,6 +18,7 @@
     <string name="top_bar_import_video">Import Video</string>
     <string name="top_bar_export_as_pdf">Export Text as PDF</string>
     <string name="top_bar_export_as_txt">Export as Text File</string>
+    <string name="top_bar_export_as_markdown">Export as Markdown</string>
     <!-- Delete Dialog -->
     <string name="confirmation">Confirm</string>
     <string name="confirmation_text">Do you want to delete the Note? This action cannot be undone</string>

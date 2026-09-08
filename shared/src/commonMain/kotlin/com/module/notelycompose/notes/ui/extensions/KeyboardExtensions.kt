@@ -10,7 +10,14 @@ fun FocusRequester.showKeyboard(
     if(imeVisible) {
         keyboardController?.hide()
     } else {
-        requestFocus()
+        try {
+            // Throws IllegalStateException if the note editor's BasicTextField isn't currently
+            // part of the composition (e.g. this button was tapped from a tab other than
+            // Transcript) — real crash observed on-device, see git history for the log.
+            requestFocus()
+        } catch (e: IllegalStateException) {
+            // Nothing to focus; fall through to just showing the keyboard.
+        }
         keyboardController?.show()
     }
 }
