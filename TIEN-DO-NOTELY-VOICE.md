@@ -2,6 +2,28 @@
 
 Ghi lại toàn bộ để bạn xem lại sau 2-3 ngày, không cần hỏi lại từ đầu.
 
+## KẾ HOẠCH 3 ĐỢT ĐANG CHẠY (biến app thành sổ ghi chú thật sự)
+
+Kế hoạch đầy đủ nằm ở file plan riêng; tóm tắt để nhớ:
+
+- **Đợt 1 — XONG** (đã test trên máy ảo, đang build IPA): sửa copy/share/PDF theo đúng tab
+  đang xem (trước đây chỉ copy được Transcript); ô tiêu đề hiện sẵn đầu note thay cho menu
+  "Rename note"; note mới mở thẳng vào chỗ gõ chữ; nút 3 gạch → nút "+" tạo note.
+  Sửa kèm 1 lỗi thật: tiêu đề bị nội dung ghi đè mỗi lần gõ.
+- **Đợt 2 — chưa làm**: sổ tay (notebook) phân loại note, mỗi note thuộc 1 sổ.
+  **Bắt buộc có file migration `1.sqm`** (xem cảnh báo dưới đây), và phải test nâng cấp:
+  cài bản cũ → tạo note → cài đè bản mới → note cũ phải còn nguyên.
+- **Đợt 3 — chưa làm**: đính kèm ảnh/video/PDF, hiện thành dãy thẻ dưới phần chữ.
+
+**Cảnh báo kỹ thuật quan trọng cho Đợt 2/3:** dự án dùng SQLDelight 1.5.5 và **chưa từng có
+file migration nào**, nên `Schema.version` vĩnh viễn = 1 và hàm `migrate()` rỗng. Nếu thêm
+bảng/cột mới mà không kèm file `.sqm`, máy nào đã cài app từ trước sẽ **không** được tạo
+bảng mới → lỗi `no such table/column` lúc chạy. Migration đầu tiên nên dùng
+`CREATE TABLE IF NOT EXISTS` để vá luôn bảng `noteAiContentEntity` (bảng này thêm hồi trước
+cũng không có migration).
+
+---
+
 ## TIN MỚI NHẤT (9/9): Đổi logo, thêm đổi tên note, sửa lỗi khung soạn thảo
 
 Ba việc bạn yêu cầu, cả ba đã làm xong và **verify trực tiếp trên emulator** (không suy đoán):
@@ -217,9 +239,13 @@ Tải kết quả: `gh run download <run-id> --repo hoangvi1810-jpg/NotelyVoice 
 ### Thông tin kỹ thuật (để tham khảo khi cần)
 - Repo fork của bạn: https://github.com/hoangvi1810-jpg/NotelyVoice (nhánh
   `feature/vietnamese-ai-notes`)
-- Commit mới nhất: `71ef4aa` — "AI Note tab: all 5 templates output English, not just
-  Classic"
-- Build iOS mới nhất (thành công): run `34248208233` (giao diện tím + bản vá Keychain +
+- Commit mới nhất: `7b62bc8` — logo mới + đổi tên note + sửa lỗi khung soạn thảo
+- Build iOS mới nhất (thành công): run `34295120422` (logo mới, đổi tên note, sửa lỗi
+  khung soạn thảo, + mọi thứ trước đó: giao diện tím, bản vá Keychain, AI Note tiếng Anh,
+  nút Dán) → https://github.com/hoangvi1810-jpg/NotelyVoice/actions/runs/34295120422 —
+  file `.ipa` đã tải về sẵn tại
+  `notely-ios-build\notely-voice-unsigned-ipa-fixed\notely-voice-unsigned-ipa\`
+- Build iOS trước đó: run `34248208233` (giao diện tím + bản vá Keychain +
   **toàn bộ tab AI Note luôn ra tiếng Anh** (cả 5 template: Classic/Brainstorm/Meeting/
   Lecture/Journaling) trong khi Highlights/Summary/Transcript vẫn tiếng Việt + nút "Dán"
   cho ô API key) → https://github.com/hoangvi1810-jpg/NotelyVoice/actions/runs/34248208233
