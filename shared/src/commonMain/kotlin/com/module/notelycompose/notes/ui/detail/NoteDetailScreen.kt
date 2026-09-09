@@ -35,7 +35,6 @@ import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.rememberDismissState
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -82,18 +81,18 @@ import com.module.notelycompose.notes.ui.share.ShareDialog
 import com.module.notelycompose.notes.ui.theme.LocalCustomColors
 import com.module.notelycompose.ui.components.NotelyFab
 import com.module.notelycompose.platform.presentation.PlatformViewModel
+import com.module.notelycompose.Arguments
 import com.module.notelycompose.resources.Res
 import com.module.notelycompose.resources.confirmation_cancel
 import com.module.notelycompose.resources.download_dialog_error
 import com.module.notelycompose.resources.ic_transcription
 import com.module.notelycompose.resources.note_detail_recorder
-import com.module.notelycompose.resources.rename_note_dialog_cancel
-import com.module.notelycompose.resources.rename_note_dialog_save
-import com.module.notelycompose.resources.rename_note_dialog_title
+import com.module.notelycompose.resources.note_title_placeholder
 import com.module.notelycompose.resources.top_bar_my_note
 import com.module.notelycompose.resources.transcription_icon
 import com.module.notelycompose.resources.vectors.IcRecorder
 import com.module.notelycompose.resources.vectors.Images
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
@@ -137,10 +136,32 @@ fun NoteDetailScreen(
     var showExistingRecordConfirmDialog by remember { mutableStateOf(false) }
     var showCopiedTooltip by remember { mutableStateOf(false) }
     var isFabVisible by remember { mutableStateOf(true) }
-    var selectedTab by remember { mutableStateOf(NoteDetailTab.AI_NOTE) }
+    // A brand-new note (id "0") has nothing for the AI tabs to show, so landing on AI_NOTE meant
+    // "create note" dropped you on an empty "Tạo với AI" panel instead of somewhere you can type.
+    var selectedTab by remember {
+        mutableStateOf(
+            if (noteId == Arguments.DEFAULT_NOTE_ID) {
+                NoteDetailTab.TRANSCRIPT
+            } else {
+                NoteDetailTab.AI_NOTE
+            }
+        )
+    }
     var showTemplateSheet by remember { mutableStateOf(false) }
-    var showRenameDialog by remember { mutableStateOf(false) }
     val aiUiState by noteAiViewModel.uiState.collectAsStateWithLifecycle()
+
+    // What the copy/share actions act on: whatever the user is actually looking at. Previously
+    // both always used the raw transcript, so the AI tabs could not be copied or shared at all.
+    val visibleTabText = when (selectedTab) {
+        NoteDetailTab.AI_NOTE -> aiUiState.aiNote
+        NoteDetailTab.HIGHLIGHTS -> aiUiState.highlights
+        NoteDetailTab.SUMMARY -> aiUiState.summary
+        NoteDetailTab.TRANSCRIPT -> editorState.content.text
+    }.ifBlank { editorState.content.text }
+
+    val exportTitle = editorState.title.ifBlank {
+        editorState.content.text.lineSequence().firstOrNull { it.isNotBlank() }?.take(60).orEmpty()
+    }.ifBlank { "Ghi chú" }
 
     LaunchedEffect(currentNoteId) {
         currentNoteId?.let { noteAiViewModel.loadIfNeeded(it) }
@@ -198,9 +219,8 @@ fun NoteDetailScreen(
                 onShare = {
                     showShareDialog = true
                 },
-                onRenameClick = { showRenameDialog = true },
                 onCopy = {
-                    platformViewModel.onCopy(editorState.content.text)
+                    platformViewModel.onCopy(visibleTabText)
                 },
                 onExportAudio = {
                     platformViewModel.onExportAudio(editorState.recording.recordingPath)
@@ -218,14 +238,15 @@ fun NoteDetailScreen(
                     platformViewModel.onExportTextAsTxt(editorState.content.text)
                 },
                 onExportTextAsPDF = {
-                    platformViewModel.onExportTextAsPDF(editorState.content.text)
+                    platformViewModel.onExportTextAsPDF(
+                        title = exportTitle,
+                        transcript = editorState.content.text,
+                        aiNote = aiUiState.aiNote,
+                        highlights = aiUiState.highlights,
+                        summary = aiUiState.summary
+                    )
                 },
                 onExportTextAsMarkdown = {
-                    val exportTitle = editorState.content.text
-                        .lineSequence()
-                        .firstOrNull { it.isNotBlank() }
-                        ?.take(60)
-                        ?: "Ghi chú"
                     platformViewModel.onExportTextAsMarkdown(
                         title = exportTitle,
                         transcript = editorState.content.text,
@@ -308,6 +329,11 @@ fun NoteDetailScreen(
                 .padding(paddingValues)
                 .background(LocalCustomColors.current.bodyBackgroundColor)
         ) {
+            NoteTitleField(
+                title = editorState.title,
+                onTitleChange = editorViewModel::updateTitle
+            )
+
             NoteDetailTabRow(
                 selectedTab = selectedTab,
                 onTabSelected = { selectedTab = it }
@@ -425,49 +451,9 @@ fun NoteDetailScreen(
                 platformViewModel.shareRecording(editorState.recording.recordingPath)
             },
             onShareTexts = {
-                platformViewModel.shareText(editorState.content.text)
+                platformViewModel.shareText(visibleTabText)
             },
             onDismiss = { showShareDialog = false }
-        )
-    }
-
-    if (showRenameDialog) {
-        var renameInput by remember(editorState.title) {
-            mutableStateOf(editorState.title)
-        }
-        AlertDialog(
-            onDismissRequest = { showRenameDialog = false },
-            title = { Text(stringResource(Res.string.rename_note_dialog_title)) },
-            text = {
-                OutlinedTextField(
-                    value = renameInput,
-                    onValueChange = { renameInput = it },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-            },
-            buttons = {
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(8.dp),
-                    horizontalArrangement = Arrangement.End
-                ) {
-                    Button(onClick = { showRenameDialog = false }) {
-                        Text(stringResource(Res.string.rename_note_dialog_cancel))
-                    }
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Button(
-                        onClick = {
-                            val trimmed = renameInput.trim()
-                            if (trimmed.isNotBlank()) {
-                                editorViewModel.updateTitle(trimmed)
-                            }
-                            showRenameDialog = false
-                        }
-                    ) {
-                        Text(stringResource(Res.string.rename_note_dialog_save))
-                    }
-                }
-            }
         )
     }
 
@@ -609,6 +595,59 @@ private fun NoteContent(
     )
 }
 
+
+/**
+ * The note's title, edited in place at the top of the screen. Writes are debounced so typing a
+ * title is one DB write per pause rather than one per character, and [TextEditorViewModel
+ * .updateTitle] flags the title as custom so body edits stop mirroring into it.
+ */
+@Composable
+private fun NoteTitleField(
+    title: String,
+    onTitleChange: (String) -> Unit
+) {
+    val colors = LocalCustomColors.current
+    var input by remember { mutableStateOf(title) }
+
+    // Titles can also arrive from outside this field: the note finishing its DB load, or the AI
+    // auto-title after the first generation.
+    LaunchedEffect(title) {
+        if (title != input) input = title
+    }
+
+    LaunchedEffect(input) {
+        if (input != title) {
+            delay(500)
+            onTitleChange(input)
+        }
+    }
+
+    BasicTextField(
+        value = input,
+        onValueChange = { input = it.replace("\n", "") },
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 8.dp),
+        textStyle = TextStyle(
+            color = colors.onSurface,
+            fontSize = 24.sp,
+            fontWeight = FontWeight.Bold
+        ),
+        cursorBrush = SolidColor(colors.accent),
+        singleLine = true,
+        decorationBox = { innerTextField ->
+            if (input.isEmpty()) {
+                Text(
+                    text = stringResource(Res.string.note_title_placeholder),
+                    color = colors.onSurfaceVariant,
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+            innerTextField()
+        }
+    )
+}
 
 @Composable
 private fun DateHeader(dateString: String) {

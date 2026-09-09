@@ -86,15 +86,22 @@ class NoteListViewModel(
 
     private fun domainToPresentationModel(note: NoteDomainModel): NotePresentationModel {
         val retrievedNote = notePresentationMapper.mapToPresentationModel(note)
+        // Untitled notes fall back to the body's first line, so a note you just typed without
+        // bothering with a title still reads sensibly in the list. When that happens the preview
+        // shows the *next* line instead, to avoid printing the same line twice on one card.
+        val body = note.content.trim()
+        val hasOwnTitle = note.title.isNotBlank()
+        val displayTitle = (if (hasOwnTitle) note.title.trim() else body)
+            .takeIf { it.isNotEmpty() }
+            ?.returnFirstLine()
+            ?.truncateWithEllipsis()
+            ?: DEFAULT_TITLE
+        val preview = body.takeIf { it.isNotEmpty() }?.let {
+            if (hasOwnTitle) it.returnFirstLine() else it.getFirstNonEmptyLineAfterFirst()
+        }
         return retrievedNote.copy(
-            title = note.title.trim().takeIf { it.isNotEmpty() }
-                ?.returnFirstLine()
-                ?.truncateWithEllipsis()
-                ?: DEFAULT_TITLE,
-            content = note.content.trim().takeIf { it.isNotEmpty() }
-                ?.getFirstNonEmptyLineAfterFirst()
-                ?.truncateWithEllipsis(CONTENT_LENGTH)
-                ?: DEFAULT_CONTENT
+            title = displayTitle,
+            content = preview?.truncateWithEllipsis(CONTENT_LENGTH) ?: DEFAULT_CONTENT
         )
     }
 

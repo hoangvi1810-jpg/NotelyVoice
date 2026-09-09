@@ -33,6 +33,7 @@ import com.module.notelycompose.notes.presentation.list.NoteListViewModel
 import com.module.notelycompose.notes.ui.share.ShareDialog
 import com.module.notelycompose.notes.ui.theme.LocalCustomColors
 import com.module.notelycompose.platform.presentation.PlatformUiState
+import com.module.notelycompose.Arguments
 import com.module.notelycompose.resources.Res
 import com.module.notelycompose.resources.cancel
 import com.module.notelycompose.resources.export
@@ -46,7 +47,6 @@ import org.jetbrains.compose.resources.painterResource
 @Composable
 fun NoteListScreen(
     navigateToSettings: () -> Unit,
-    navigateToMenu: () -> Unit,
     navigateToNoteDetails: (String) -> Unit,
     navigateToExportNotes: () -> Unit,
     viewModel: NoteListViewModel = koinViewModel(),
@@ -63,8 +63,10 @@ fun NoteListScreen(
     Scaffold(
             topBar = {
                 TopBar(
-                    onMenuClicked = {
-                       navigateToMenu()
+                    // Was a hamburger opening a quick-settings sheet that only duplicated the
+                    // full Settings screen behind the gear icon on the right.
+                    onCreateNoteClicked = {
+                        navigateToNoteDetails(Arguments.DEFAULT_NOTE_ID)
                     },
                     onSettingsClicked = {
                       navigateToSettings()
@@ -84,7 +86,7 @@ fun NoteListScreen(
                                 showExportNotesConfirmDialog = true
                             }
                         } else {
-                            navigateToNoteDetails("0")
+                            navigateToNoteDetails(Arguments.DEFAULT_NOTE_ID)
                         }
 
                     }

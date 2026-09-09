@@ -41,7 +41,6 @@ import com.module.notelycompose.resources.top_bar_export_audio_folder
 import com.module.notelycompose.resources.top_bar_export_as_markdown
 import com.module.notelycompose.resources.top_bar_import_audio
 import com.module.notelycompose.resources.top_bar_my_note
-import com.module.notelycompose.resources.top_bar_rename_note
 import com.module.notelycompose.resources.top_bar_export_as_txt
 import com.module.notelycompose.resources.top_bar_export_as_pdf
 import com.module.notelycompose.resources.top_bar_import_video
@@ -62,7 +61,6 @@ fun DetailNoteTopBar(
     onExportTextAsTxt: () -> Unit,
     onExportTextAsPDF: () -> Unit,
     onExportTextAsMarkdown: () -> Unit = {},
-    onRenameClick: () -> Unit = {},
     isRecordingExist: Boolean
 ) {
     var showExistingRecordConfirmDialog by remember { mutableStateOf(false) }
@@ -90,8 +88,7 @@ fun DetailNoteTopBar(
             },
             onExportTextAsTxt = onExportTextAsTxt,
             onExportTextAsPDF = onExportTextAsPDF,
-            onExportTextAsMarkdown = onExportTextAsMarkdown,
-            onRenameClick = onRenameClick
+            onExportTextAsMarkdown = onExportTextAsMarkdown
         )
     } else {
         DetailIOSNoteTopBar(
@@ -115,8 +112,7 @@ fun DetailNoteTopBar(
             },
             onExportTextAsTxt = onExportTextAsTxt,
             onExportTextAsPDF = onExportTextAsPDF,
-            onExportTextAsMarkdown = onExportTextAsMarkdown,
-            onRenameClick = onRenameClick
+            onExportTextAsMarkdown = onExportTextAsMarkdown
         )
     }
 
@@ -155,8 +151,7 @@ fun DetailAndroidNoteTopBar(
     onImportVideoClick: () -> Unit,
     onExportTextAsTxt: () -> Unit,
     onExportTextAsPDF: () -> Unit,
-    onExportTextAsMarkdown: () -> Unit = {},
-    onRenameClick: () -> Unit = {}
+    onExportTextAsMarkdown: () -> Unit = {}
 ) {
     val colors = LocalCustomColors.current
     TopAppBar(
@@ -194,8 +189,7 @@ fun DetailAndroidNoteTopBar(
                 onImportVideoClick = onImportVideoClick,
                 onExportTextAsTxt = onExportTextAsTxt,
                 onExportTextAsPDF = onExportTextAsPDF,
-                onExportTextAsMarkdown = onExportTextAsMarkdown,
-                onRenameClick = onRenameClick
+                onExportTextAsMarkdown = onExportTextAsMarkdown
             )
         },
         colors = TopAppBarDefaults.topAppBarColors(
@@ -219,7 +213,6 @@ fun DetailIOSNoteTopBar(
     onExportTextAsTxt: () -> Unit,
     onExportTextAsPDF: () -> Unit,
     onExportTextAsMarkdown: () -> Unit = {},
-    onRenameClick: () -> Unit = {},
     onShare: () -> Unit
 ) {
     val colors = LocalCustomColors.current
@@ -265,8 +258,7 @@ fun DetailIOSNoteTopBar(
                 onImportVideoClick = onImportVideoClick,
                 onExportTextAsTxt = onExportTextAsTxt,
                 onExportTextAsPDF = onExportTextAsPDF,
-                onExportTextAsMarkdown = onExportTextAsMarkdown,
-                onRenameClick = onRenameClick
+                onExportTextAsMarkdown = onExportTextAsMarkdown
             )
         },
         colors = TopAppBarDefaults.topAppBarColors(
@@ -287,8 +279,7 @@ fun DetailDropDownMenu(
     onImportVideoClick: () -> Unit = {},
     onExportTextAsTxt: () -> Unit,
     onExportTextAsPDF: () -> Unit,
-    onExportTextAsMarkdown: () -> Unit = {},
-    onRenameClick: () -> Unit = {}
+    onExportTextAsMarkdown: () -> Unit = {}
 ) {
     var dropdownExpanded by remember { mutableStateOf(false) }
     val colors = LocalCustomColors.current
@@ -306,14 +297,6 @@ fun DetailDropDownMenu(
             onDismissRequest = { dropdownExpanded = false },
             modifier = Modifier.padding(vertical = 0.dp)
         ) {
-            DropdownMenuItem(
-                text = { Text(stringResource(Res.string.top_bar_rename_note)) },
-                onClick = {
-                    dropdownExpanded = false
-                    onRenameClick()
-                }
-            )
-
             DropdownMenuItem(
                 text = { Text(stringResource(Res.string.top_bar_import_audio)) },
                 onClick = {

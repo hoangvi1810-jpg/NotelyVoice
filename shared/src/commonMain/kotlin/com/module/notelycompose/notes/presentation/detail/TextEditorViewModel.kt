@@ -100,15 +100,11 @@ class TextEditorViewModel(
 
     fun onUpdateContent(newContent: TextFieldValue) {
         updateContent(newContent)
-        val isCustomTitle = _editorPresentationState.value.isCustomTitle
-        // Once a title has been set independently (manual rename or AI auto-title), further body
-        // edits must not silently overwrite it -- only mirror content into title for notes nobody
-        // has ever renamed, same as the app's original behavior.
-        if (!isCustomTitle) {
-            _editorPresentationState.update { it.copy(title = newContent.text) }
-        }
+        // The title is owned solely by the title field (and the AI auto-title). It used to mirror
+        // content.text on every keystroke, which meant typing a body instantly wiped a title the
+        // user had just typed.
         createOrUpdateEvent(
-            title = if (isCustomTitle) _editorPresentationState.value.title else newContent.text,
+            title = _editorPresentationState.value.title,
             content = newContent.text,
             starred = _editorPresentationState.value.starred,
             formatting = _editorPresentationState.value.formats,
@@ -155,10 +151,6 @@ class TextEditorViewModel(
             it.copy(
                 content = TextFieldValue(content),
                 title = title,
-                // Title and content start out identical for every note (see onUpdateContent) --
-                // if they differ, someone already renamed it (manually or via AI auto-title)
-                // before this session, so don't resume clobbering it as the user keeps typing.
-                isCustomTitle = title.isNotBlank() && title != content,
                 formats = formats,
                 textAlign = textAlign,
                 recording = recordingPath(recordingPath),
@@ -174,19 +166,16 @@ class TextEditorViewModel(
     }
 
     /**
-     * Sets a title distinct from the note's content (title and content are otherwise always kept
-     * identical — see [onUpdateContent]) and marks it as custom so further body edits stop
-     * mirroring into it. Used both by the manual rename UI and by the AI auto-title feature,
-     * called once per note right after its first AI Note generation — see
-     * NoteAiViewModel.generatedTitle.
+     * Sets the note's title. Used by the title field at the top of the note detail screen and by
+     * the AI auto-title feature (see NoteAiViewModel.generatedTitle). Goes through
+     * [createOrUpdateEvent] rather than [updateNote] so that titling a brand-new note — one that
+     * has no row yet because nothing has been typed into the body — creates it instead of being
+     * silently dropped.
      */
     fun updateTitle(title: String) {
-        val noteId = _currentNoteId.value
-        if (noteId == null || noteId == ID_NOT_SET) return
         val state = _editorPresentationState.value
-        _editorPresentationState.update { it.copy(title = title, isCustomTitle = true) }
-        updateNote(
-            noteId = noteId,
+        _editorPresentationState.update { it.copy(title = title) }
+        createOrUpdateEvent(
             title = title,
             content = state.content.text,
             starred = state.starred,

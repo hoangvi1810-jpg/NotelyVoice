@@ -106,9 +106,6 @@ fun NoteAppRoot(platformUiState: PlatformUiState) {
                     navigateToSettings = {
                         navController.navigateSingleTop(Routes.Settings)
                     },
-                    navigateToMenu = {
-                        navController.navigateSingleTop(Routes.Menu)
-                    },
                     navigateToNoteDetails = { noteId ->
                         navController.navigateSingleTop(Routes.Details(noteId))
                     },

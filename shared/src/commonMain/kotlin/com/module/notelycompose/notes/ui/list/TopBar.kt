@@ -13,7 +13,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -24,6 +24,7 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.unit.dp
 import com.module.notelycompose.notes.ui.theme.LocalCustomColors
 import com.module.notelycompose.resources.Res
+import com.module.notelycompose.resources.note_list_add_note
 import com.module.notelycompose.resources.top_bar_notes
 import org.jetbrains.compose.resources.stringResource
 
@@ -32,7 +33,7 @@ fun TopBar(
     title: String = stringResource(Res.string.top_bar_notes),
     isLeftIconVisible: Boolean = true,
     isRightIconVisible: Boolean = true,
-    onMenuClicked: () -> Unit = {},
+    onCreateNoteClicked: () -> Unit = {},
     onSettingsClicked: () -> Unit = {}
 ) {
     val focusManager = LocalFocusManager.current
@@ -60,13 +61,13 @@ fun TopBar(
                         .clip(CircleShape)
                         .background(colors.bodyContentColor)
                         .align(Alignment.CenterStart)
-                        .clickable { onMenuClicked() },
+                        .clickable { onCreateNoteClicked() },
                 ) {
                     Icon(
-                        imageVector = Icons.Filled.Menu,
+                        imageVector = Icons.Filled.Add,
                         tint = colors.bodyBackgroundColor,
                         modifier = Modifier.size(24.dp).align(Alignment.Center),
-                        contentDescription = ""
+                        contentDescription = stringResource(Res.string.note_list_add_note)
                     )
                 }
             }
