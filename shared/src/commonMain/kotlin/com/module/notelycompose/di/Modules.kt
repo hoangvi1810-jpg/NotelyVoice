@@ -9,6 +9,8 @@ import com.module.notelycompose.audio.presentation.AudioRecorderViewModel
 import com.module.notelycompose.audio.presentation.mappers.AudioPlayerPresentationToUiMapper
 import com.module.notelycompose.audio.presentation.mappers.AudioRecorderPresentationToUiMapper
 import com.module.notelycompose.database.NoteDatabase
+import com.module.notelycompose.notebook.NotebookRepository
+import com.module.notelycompose.notebook.NotebookViewModel
 import com.module.notelycompose.modelDownloader.ModelDownloaderViewModel
 import com.module.notelycompose.notes.data.NoteSqlDelightDataSource
 import com.module.notelycompose.notes.domain.DeleteNoteById
@@ -60,6 +62,8 @@ val appModule = module {
 
     factory { ModelSelection(get()) }
 
+    single { NotebookRepository(get()) }
+
     // AI (OpenRouter)
     single { OpenRouterClient() }
     single { AiContentDataSource(get()) }
@@ -91,6 +95,7 @@ val viewModelModule = module {
     viewModelOf(::TextEditorViewModel)
     viewModelOf(::NoteDetailScreenViewModel)
     viewModelOf(::NoteAiViewModel)
+    viewModelOf(::NotebookViewModel)
     viewModelOf(::ModelDownloaderViewModel)
     viewModelOf(::AudioRecorderViewModel)
     viewModelOf(::AudioPlayerViewModel)
@@ -99,7 +104,7 @@ val viewModelModule = module {
 }
 
 val useCaseModule = module {
-    factory { DeleteNoteById(get()) }
+    factory { DeleteNoteById(get(), get(), get()) }
     factory { GetAllNotesUseCase(get(), get()) }
     factory { GetLastNote(get(), get()) }
     factory { GetNoteById(get(), get()) }

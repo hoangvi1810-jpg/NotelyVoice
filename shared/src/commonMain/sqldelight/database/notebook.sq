@@ -1,0 +1,55 @@
+-- Notebooks: user-created categories ("Nhật ký", "Ý tưởng", "Công việc"...) used to group notes.
+--
+-- The note -> notebook link lives in its own table rather than as a column on notesEntity, for the
+-- same reason noteAiContentEntity is separate: it keeps the core note read/write path (and its
+-- four model layers plus mappers) completely untouched. `note_id` is the PRIMARY KEY, which is
+-- what enforces "a note belongs to exactly one notebook".
+--
+-- No FOREIGN KEY: SQLite has `foreign_keys` enforcement OFF by default and this project's drivers
+-- don't turn it on, so a constraint here would silently not cascade. Cleanup is explicit instead.
+CREATE TABLE notebookEntity(
+    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    created_at INTEGER NOT NULL
+);
+
+CREATE TABLE noteNotebookEntity(
+    note_id INTEGER NOT NULL PRIMARY KEY,
+    notebook_id INTEGER NOT NULL
+);
+
+getAllNotebooks:
+SELECT notebookEntity.id, notebookEntity.name, notebookEntity.created_at,
+       COUNT(noteNotebookEntity.note_id) AS note_count
+FROM notebookEntity
+LEFT JOIN noteNotebookEntity ON noteNotebookEntity.notebook_id = notebookEntity.id
+GROUP BY notebookEntity.id
+ORDER BY notebookEntity.created_at ASC;
+
+countNotebooks:
+SELECT COUNT(*) FROM notebookEntity;
+
+insertNotebook:
+INSERT INTO notebookEntity(name, created_at) VALUES(:name, :created_at);
+
+renameNotebook:
+UPDATE notebookEntity SET name = :name WHERE id = :id;
+
+deleteNotebook:
+DELETE FROM notebookEntity WHERE id = :id;
+
+-- Notes in a deleted notebook are kept, they just become uncategorised.
+clearNotebookAssignments:
+DELETE FROM noteNotebookEntity WHERE notebook_id = :notebook_id;
+
+getNotebookIdForNote:
+SELECT notebook_id FROM noteNotebookEntity WHERE note_id = :note_id;
+
+getAllAssignments:
+SELECT note_id, notebook_id FROM noteNotebookEntity;
+
+setNoteNotebook:
+INSERT OR REPLACE INTO noteNotebookEntity(note_id, notebook_id) VALUES(:note_id, :notebook_id);
+
+removeNoteFromNotebook:
+DELETE FROM noteNotebookEntity WHERE note_id = :note_id;

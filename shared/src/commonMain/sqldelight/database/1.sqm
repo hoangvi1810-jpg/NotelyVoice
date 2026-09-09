@@ -1,0 +1,29 @@
+-- Migration 1 -> 2. This file is load-bearing, do not delete it.
+--
+-- Until this file existed the project had no migrations at all, which meant NoteDatabase.Schema
+-- stayed at version 1 with an empty migrate() body: any table added to a .sq file was created on
+-- fresh installs but never on devices that already had notes.db. noteAiContentEntity shipped that
+-- way, so it is recreated defensively here (IF NOT EXISTS) to heal installs that predate it.
+--
+-- Every statement must be safe to run on a database that may already contain some of these tables.
+
+CREATE TABLE IF NOT EXISTS noteAiContentEntity(
+    note_id INTEGER NOT NULL PRIMARY KEY,
+    template TEXT NOT NULL DEFAULT 'classic',
+    ai_note TEXT NOT NULL DEFAULT '',
+    highlights TEXT NOT NULL DEFAULT '',
+    summary TEXT NOT NULL DEFAULT '',
+    tags TEXT NOT NULL DEFAULT '',
+    generated_at INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS notebookEntity(
+    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    created_at INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS noteNotebookEntity(
+    note_id INTEGER NOT NULL PRIMARY KEY,
+    notebook_id INTEGER NOT NULL
+);

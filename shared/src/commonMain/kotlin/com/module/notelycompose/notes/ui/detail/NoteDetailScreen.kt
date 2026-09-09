@@ -75,6 +75,9 @@ import com.module.notelycompose.modelDownloader.ModelDownloaderViewModel
 import com.module.notelycompose.audio.presentation.AudioImportViewModel
 import com.module.notelycompose.audio.ui.importing.ImportingAudioStateHost
 import com.module.notelycompose.modelDownloader.ModelSelection
+import com.module.notelycompose.notebook.NotebookViewModel
+import com.module.notelycompose.notebook.ui.NotebookPickerSheet
+import com.module.notelycompose.notebook.ui.NotebookRow
 import com.module.notelycompose.notes.presentation.detail.NoteAiViewModel
 import com.module.notelycompose.notes.presentation.detail.TextEditorViewModel
 import com.module.notelycompose.notes.ui.share.ShareDialog
@@ -113,7 +116,8 @@ fun NoteDetailScreen(
     audioImportViewModel: AudioImportViewModel = koinViewModel(),
     editorViewModel: TextEditorViewModel,
     modelSelection: ModelSelection = koinInject(),
-    noteAiViewModel: NoteAiViewModel = koinViewModel()
+    noteAiViewModel: NoteAiViewModel = koinViewModel(),
+    notebookViewModel: NotebookViewModel = koinViewModel()
 ) {
     val currentNoteId by editorViewModel.currentNoteId.collectAsStateWithLifecycle()
     val importingState by audioImportViewModel.importingAudioState.collectAsStateWithLifecycle()
@@ -148,7 +152,10 @@ fun NoteDetailScreen(
         )
     }
     var showTemplateSheet by remember { mutableStateOf(false) }
+    var showNotebookSheet by remember { mutableStateOf(false) }
     val aiUiState by noteAiViewModel.uiState.collectAsStateWithLifecycle()
+    val notebookState by notebookViewModel.state.collectAsStateWithLifecycle()
+    val currentNotebookId = currentNoteId?.let { notebookState.assignments[it] }
 
     // What the copy/share actions act on: whatever the user is actually looking at. Previously
     // both always used the raw transcript, so the AI tabs could not be copied or shared at all.
@@ -334,6 +341,13 @@ fun NoteDetailScreen(
                 onTitleChange = editorViewModel::updateTitle
             )
 
+            NotebookRow(
+                notebookName = notebookState.notebooks
+                    .firstOrNull { it.id == currentNotebookId }
+                    ?.name,
+                onClick = { showNotebookSheet = true }
+            )
+
             NoteDetailTabRow(
                 selectedTab = selectedTab,
                 onTabSelected = { selectedTab = it }
@@ -378,6 +392,20 @@ fun NoteDetailScreen(
                 }
             }
         }
+    }
+
+    if (showNotebookSheet) {
+        NotebookPickerSheet(
+            notebooks = notebookState.notebooks,
+            selectedNotebookId = currentNotebookId,
+            onSelect = { notebookId ->
+                currentNoteId?.takeIf { it != 0L }?.let { noteId ->
+                    notebookViewModel.assign(noteId, notebookId)
+                }
+            },
+            onCreate = notebookViewModel::create,
+            onDismiss = { showNotebookSheet = false }
+        )
     }
 
     if (showTemplateSheet) {

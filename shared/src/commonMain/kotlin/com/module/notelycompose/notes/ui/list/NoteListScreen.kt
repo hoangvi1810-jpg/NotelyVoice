@@ -28,6 +28,9 @@ import androidx.compose.ui.unit.dp
 import com.module.notelycompose.export.presentation.ExportSelectionViewModel
 import com.module.notelycompose.export.ui.ExportSelectedItemConfirmationDialog
 import com.module.notelycompose.export.ui.NoSelectionErrorDialog
+import com.module.notelycompose.notebook.NotebookViewModel
+import com.module.notelycompose.notebook.ui.NotebookFilterBar
+import com.module.notelycompose.notebook.ui.NotebookManagerSheet
 import com.module.notelycompose.notes.presentation.list.NoteListIntent
 import com.module.notelycompose.notes.presentation.list.NoteListViewModel
 import com.module.notelycompose.notes.ui.share.ShareDialog
@@ -51,6 +54,7 @@ fun NoteListScreen(
     navigateToExportNotes: () -> Unit,
     viewModel: NoteListViewModel = koinViewModel(),
     exportViewModel: ExportSelectionViewModel = koinViewModel(),
+    notebookViewModel: NotebookViewModel = koinViewModel(),
     platformUiState: PlatformUiState
 ) {
     val notesListState by viewModel.state.collectAsState()
@@ -59,6 +63,9 @@ fun NoteListScreen(
     var showExportNotesConfirmDialog by remember { mutableStateOf(false) }
     var showNoSelectionDialog by remember { mutableStateOf(false) }
     var isEmptySelection by remember { mutableStateOf(false) }
+    val notebookState by notebookViewModel.state.collectAsState()
+    var selectedNotebookId by remember { mutableStateOf<Long?>(null) }
+    var showNotebookManager by remember { mutableStateOf(false) }
 
     Scaffold(
             topBar = {
@@ -137,8 +144,21 @@ fun NoteListScreen(
                     },
                     allSizeStr = notesListState.allNotesSizeStr
                 )
+                NotebookFilterBar(
+                    notebooks = notebookState.notebooks,
+                    selectedNotebookId = selectedNotebookId,
+                    onSelect = { selectedNotebookId = it },
+                    onManage = { showNotebookManager = true }
+                )
                 NoteList(
-                    noteList = viewModel.onGetUiState(notesListState),
+                    noteList = viewModel.onGetUiState(notesListState).let { notes ->
+                        val notebookId = selectedNotebookId
+                        if (notebookId == null) {
+                            notes
+                        } else {
+                            notes.filter { notebookState.assignments[it.id] == notebookId }
+                        }
+                    },
                     onNoteClicked = { id ->
                         navigateToNoteDetails("$id")
                     },
@@ -157,6 +177,18 @@ fun NoteListScreen(
                 if(notesListState.showEmptyContent) EmptyNoteUi(platformUiState.isTablet)
             }
         }
+
+    if (showNotebookManager) {
+        NotebookManagerSheet(
+            notebooks = notebookState.notebooks,
+            onRename = notebookViewModel::rename,
+            onDelete = { notebookId ->
+                if (selectedNotebookId == notebookId) selectedNotebookId = null
+                notebookViewModel.delete(notebookId)
+            },
+            onDismiss = { showNotebookManager = false }
+        )
+    }
 
     ExportSelectedItemConfirmationDialog(
         showExportNotesConfirmDialog = showExportNotesConfirmDialog,
