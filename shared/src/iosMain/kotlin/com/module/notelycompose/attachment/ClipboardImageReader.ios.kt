@@ -7,8 +7,10 @@ import platform.Foundation.NSFileManager
 import platform.Foundation.NSURL
 import platform.Foundation.NSUserDomainMask
 import platform.Foundation.timeIntervalSince1970
+import platform.Foundation.writeToURL
 import platform.UIKit.UIImagePNGRepresentation
 import platform.UIKit.UIPasteboard
+import platform.UIKit.image
 
 @OptIn(ExperimentalForeignApi::class)
 actual class ClipboardImageReader {
@@ -26,7 +28,7 @@ actual class ClipboardImageReader {
         val displayName = "pasted_$stamp.png"
         val target = documentsDir.URLByAppendingPathComponent("attachment_$displayName") ?: return null
 
-        val written = data.writeToURL(target, true)
+        val written = data.writeToURL(target, atomically = true)
         val path = target.path
         return if (written && path != null) {
             PickedFile(path = path, displayName = displayName, kind = AttachmentKind.IMAGE)
