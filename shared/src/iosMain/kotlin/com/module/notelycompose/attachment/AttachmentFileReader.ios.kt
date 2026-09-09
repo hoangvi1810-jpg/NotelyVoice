@@ -5,6 +5,7 @@ import kotlinx.cinterop.addressOf
 import kotlinx.cinterop.usePinned
 import platform.Foundation.NSData
 import platform.Foundation.NSURL
+import platform.Foundation.dataWithContentsOfURL
 import platform.posix.memcpy
 
 @OptIn(ExperimentalForeignApi::class)
