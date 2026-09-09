@@ -1,16 +1,59 @@
-# Tiến độ dự án Notely Voice (bản tiếng Việt AI) — 8/9/2026
+# Tiến độ dự án Notely Voice (bản tiếng Việt AI) — 8/9/2026 → 9/9/2026
 
 Ghi lại toàn bộ để bạn xem lại sau 2-3 ngày, không cần hỏi lại từ đầu.
 
-## TIN MỚI: App đã chạy thử thành công trên máy tính (Android emulator)
+## TIN MỚI NHẤT (9/9): Đổi logo, thêm đổi tên note, sửa lỗi khung soạn thảo
 
-Không cần chờ cáp iPhone nữa để **xem app chạy** — đã cài JDK + Android SDK + emulator
-ngay trên máy này, build APK, chạy thử, chụp màn hình xác nhận: theme màu be/caramel
-đúng, giao diện 4 tab AI Note/Highlights/Summary/Transcript hoạt động, Note Template
-bottom sheet hoạt động, không crash. Nhân tiện test còn **tìm ra và sửa 1 bug thật**
-(màn Model Selection hiện sai dung lượng tải cho tiếng Việt — 465MB thay vì 547MB thật).
+Ba việc bạn yêu cầu, cả ba đã làm xong và **verify trực tiếp trên emulator** (không suy đoán):
 
-Cáp/adapter vẫn cần cho việc **cài lên iPhone thật** (sideload) — hai việc độc lập nhau.
+1. **Logo mới**: lấy file `logo notely.jpg` (con chó cam tư thế hú, nền kem) bạn để trong
+   thư mục repo, tự tạo lại toàn bộ icon Android (mọi độ phân giải, cả icon "adaptive" 2 lớp
+   nền+hình) và icon iOS (toàn bộ kích thước trong `AppIcon.appiconset`). Đã cài thử trên
+   emulator, icon mới lên đúng ở màn hình chính, ngăn kéo app, và màn splash.
+2. **Đổi tên note tách khỏi nội dung**: trước đây tiêu đề note = y hệt nội dung, gõ gì vào
+   note thì tiêu đề đổi theo đó, không có cách nào đặt tên riêng. Giờ vào note → bấm menu 3
+   chấm góc trên → **"Rename note"** → gõ tên tuỳ ý → Save. Tên này tách biệt hẳn khỏi nội
+   dung, gõ thêm vào note không làm mất tên đã đặt nữa. Test trực tiếp: đổi tên, quay lại
+   danh sách, tên mới hiện đúng và giữ nguyên.
+3. **Sửa lỗi khung soạn thảo bị "nở" thành khoảng trắng** (đúng như video bạn gửi): nguyên
+   nhân là code có 2 lớp cuộn (scroll) lồng nhau trong màn Transcript/nội dung note — một
+   lớp bọc ngoài không cần thiết khiến Compose tính sai kích thước, làm con trỏ gõ chữ bị
+   "lạc" vào vùng trống khi bàn phím hiện lên. Xoá lớp cuộn thừa. Test lại đúng kịch bản
+   trong video: gõ nội dung dài nhiều dòng, bấm vào giữa đoạn văn khi bàn phím đang mở — con
+   trỏ và nội dung giờ hiện đúng vị trí, gõ thêm chữ vào giữa vẫn thấy rõ, không còn khoảng
+   trắng nào nữa.
+
+Đã đẩy cả 3 lên GitHub. Build iOS mới (có đủ cả 3 thứ này) — xem mục "Thông tin kỹ thuật"
+để lấy run ID/link mới nhất khi build xong.
+
+---
+
+## TIN CŨ HƠN (8/9): Thiết kế lại toàn bộ giao diện (tím) + tìm ra và sửa 1 crash thật trên iOS
+
+Sau bản be/caramel ban đầu, đã **thiết kế lại toàn bộ giao diện sang tông tím** (theo ảnh
+mẫu app AirPods bạn gửi) — thẻ trắng nổi trên nền tím nhạt, bo góc lớn, bóng đổ mềm, nút
+bấm có cảm giác "giọt nước" (nhún + nảy nhẹ khi bấm). Đã làm hết toàn bộ màn hình: danh
+sách note, chi tiết note (4 tab AI), ghi âm, transcript, settings, onboarding, splash. Đã
+build APK, cài lên emulator Android, chụp ảnh xác nhận cả sáng lẫn tối.
+
+**Quan trọng — đã tìm ra và sửa 1 crash thật trên iOS**: bạn gửi video cho thấy app đen
+màn hình ngay khi cuộn vào Settings, trước khi kịp gõ gì vào ô API key. Đúng là bug thật —
+màn Settings tự động đọc Keychain (`aiRepository.getApiKey()`) ngay khi phần "AI
+(OpenRouter)" xuất hiện trên màn hình (không cần bấm gì), và code Keychain trên iOS
+(`SecureKeyStore.ios.kt`) có lỗi cân bằng retain/release khiến app crash ở bước đó.
+
+Bug này thật ra **đã được tìm ra và sửa ở một phiên làm việc trước** (dựa đúng bằng chứng
+video tương tự), nhưng bản sửa bị kẹt ở một bản copy code khác trên máy, chưa từng được
+đẩy lên GitHub — nên bản `.ipa` bạn sideload trước đó vẫn mang lỗi cũ. Đã ghép bản sửa vào
+đúng bản code hiện tại (bản có giao diện tím mới), đẩy lên GitHub, và **build lại `.ipa`
+mới đã xong thành công** (xem mục "Việc cần làm ngay" bên dưới để lấy file mới).
+
+**Lưu ý thành thật:** code Keychain trên iOS chưa từng được biên dịch/chạy thật trên
+thiết bị (máy này không có Mac/Xcode) — bản build mới sẽ là lần đầu tiên nó thực sự chạy
+trên iOS thật. Nếu bạn sideload xong mà vẫn thấy crash y hệt ở Settings, báo lại ngay kèm
+video mới — đó sẽ là manh mối quan trọng để tìm tiếp.
+
+Cáp/adapter vẫn cần cho việc **cài lên iPhone thật** (sideload) — độc lập với việc build.
 
 ---
 
@@ -19,11 +62,11 @@ Cáp/adapter vẫn cần cho việc **cài lên iPhone thật** (sideload) — h
 1. Cắm iPhone vào máy → mở khoá → bấm **Trust** nếu điện thoại hỏi "Trust This Computer?"
 2. Mở Sideloadly (đã cài sẵn tại `C:\Users\hoang\AppData\Local\Sideloadly\sideloadly.exe`,
    hoặc tìm "Sideloadly" trong Start Menu)
-3. Kéo file này vào giữa cửa sổ Sideloadly:
-   `C:\Users\hoang\OneDrive\Desktop\CLAUDE CODE\notely-ios-build\notely-voice-unsigned-ipa\NotelyVoice-unsigned.ipa`
-   (file này build từ commit cũ hơn 1 chút, thiếu bản vá Model Selection nói trên — không
-   ảnh hưởng gì lớn, chỉ là hiện sai số MB ở 1 màn hình phụ. Nếu muốn bản mới nhất, xem
-   mục "Build lại" bên dưới trước khi sideload)
+3. Kéo file này vào giữa cửa sổ Sideloadly (bản mới nhất, có cả giao diện tím + bản vá
+   crash Keychain, build thành công lúc 19:11):
+   `C:\Users\hoang\OneDrive\Desktop\CLAUDE CODE\notely-ios-build\notely-voice-unsigned-ipa-fixed\notely-voice-unsigned-ipa\NotelyVoice-unsigned.ipa`
+   (File cũ tại `notely-ios-build\notely-voice-unsigned-ipa\NotelyVoice-unsigned.ipa` **đã
+   lỗi thời** — không có giao diện tím mới, không có bản vá crash Keychain — đừng dùng nữa.)
 4. Gõ Apple ID + mật khẩu vào 2 ô bên dưới (nên dùng Apple ID phụ, không phải ID chính)
 5. Bấm **Start**, chờ 1-3 phút
 6. Trên iPhone: **Cài đặt → Cài đặt chung → VPN & Quản lý thiết bị** → bấm vào Apple ID
@@ -63,10 +106,10 @@ app thường). Bấm mở như điện thoại thường. Muốn cài lại b�
 6. Thử đổi Note Template (Classic/Brainstorm/Meeting/Lecture/Journaling) → xem nội dung AI
    Note có đổi theo đúng văn phong từng loại không
 7. Thử xuất file → menu 3 chấm góc trên → "Export as Markdown"
-8. **Báo lại nếu có gì bất thường**, đặc biệt: iOS Keychain (SecureKeyStore.ios.kt — phần
-   duy nhất chưa test được, kể cả trên iPhone thật lẫn CI, vì code chỉ chạy thật lần đầu
-   khi app khởi động trên thiết bị iOS) và bất kỳ chỗ nào nội dung AI trả về nhìn "sượng"
-   (là do cần chỉnh lại prompt, không phải lỗi kỹ thuật).
+8. **Báo lại nếu có gì bất thường**, đặc biệt: crash bất kỳ ở đâu trên iPhone thật (đây là
+   lần build đầu tiên có bản vá Keychain, cần xác nhận thật trên thiết bị) và bất kỳ chỗ
+   nào nội dung AI trả về nhìn "sượng" (là do cần chỉnh lại prompt, không phải lỗi kỹ
+   thuật).
 
 ---
 
@@ -90,24 +133,27 @@ export MSYS_NO_PATHCONV=1
 
 **Quan trọng:** code làm việc thật nằm ở `C:\dev\notely-repo` (copy ra ngoài OneDrive, vì
 đường dẫn có dấu cách/OneDrive làm vỡ build C++ của thư viện Whisper — xem phần "Lỗi thật
-đã sửa" bên dưới). Repo gốc trong `OneDrive\Desktop\CLAUDE CODE\notely repo` vẫn còn
-nhưng **đã cũ hơn** bản ở `C:\dev\notely-repo` — nếu sửa code, sửa ở `C:\dev\notely-repo`.
+đã sửa" bên dưới). Repo gốc trong `OneDrive\Desktop\CLAUDE CODE\notely repo` vẫn còn nhưng
+**đã cũ hơn** bản ở `C:\dev\notely-repo` — nếu sửa code, sửa ở `C:\dev\notely-repo`. (Có
+một lần 2 bản bị lệch nhau và một bản sửa lỗi thật bị kẹt lại ở bản OneDrive suốt nhiều
+giờ — xem mục "Lỗi thật đã tìm và sửa" — nên từ giờ **luôn kiểm tra `git log` cả 2 nơi**
+nếu nghi ngờ có gì đó "biến mất".)
 
-**iOS (chạy trên GitHub Actions, cần ~20-25 phút, tốn phút Actions miễn phí):**
+**iOS (chạy trên GitHub Actions, cần ~20-30 phút, tốn phút Actions miễn phí):**
 ```
 cd /c/dev/notely-repo
 git add -A && git commit -m "mô tả thay đổi"
-git push fork feature/vietnamese-ai-notes:main
-gh workflow run build-ios-unsigned.yml --repo hoangvi1810-jpg/NotelyVoice --ref main
+git push fork feature/vietnamese-ai-notes
+gh workflow run build-ios-unsigned.yml --repo hoangvi1810-jpg/NotelyVoice --ref feature/vietnamese-ai-notes
 ```
 Xem tiến trình: `gh run watch <run-id> --repo hoangvi1810-jpg/NotelyVoice --exit-status`
 Tải kết quả: `gh run download <run-id> --repo hoangvi1810-jpg/NotelyVoice --dir <thư mục>`
 
 ---
 
-## Tóm tắt những gì đã làm trong phiên này (để tham khảo, không cần đọc kỹ)
+## Tóm tắt những gì đã làm (để tham khảo, không cần đọc kỹ)
 
-### Code (6 giai đoạn theo kế hoạch ban đầu)
+### Code
 1. **Tiếng Việt nghe tốt hơn**: thêm model `ggml-large-v3-turbo-q5_0` (547MB), tự động
    chọn cho ngôn ngữ "vi" thay vì model base/small yếu.
 2. **Lớp AI qua OpenRouter**: package `ai/` mới — gọi API, 5 prompt template tiếng Việt,
@@ -115,8 +161,11 @@ Tải kết quả: `gh run download <run-id> --repo hoangvi1810-jpg/NotelyVoice 
    (không dùng thư viện `security-crypto` vì đã bị Google khai tử).
 3. **Giao diện 4 tab**: AI Note / Highlights / Summary / Transcript + bottom sheet chọn
    Note Template, giống app mẫu bạn gửi ảnh.
-4. **Đổi màu tím → be/caramel**: toàn bộ theme, tìm ra và sửa cả những chỗ tím ẩn không
-   nằm trong 3 file theme chính.
+4. **Thiết kế lại toàn bộ giao diện sang tím** (thay cho bản be/caramel ban đầu): dựng hệ
+   thống theme mới từ đầu (bảng màu, chữ, bo góc, bóng đổ, khoảng cách) + hiệu ứng bấm
+   "giọt nước" (nhún mềm có nảy nhẹ) áp dụng toàn app + sửa luôn nhiều lỗi hiển thị thật
+   (nút tàng hình, viền lệch, màu hardcode, thanh tiến trình giật, góc trắng lệch trong
+   dark mode...).
 5. **Export & tự đặt tên**: thêm export Markdown, AI tự sinh tiêu đề + tag sau lần tạo
    AI Note đầu tiên.
 6. **CI build iOS**: workflow GitHub Actions build file `.ipa` chưa ký trên máy ảo macOS,
@@ -137,23 +186,47 @@ Tải kết quả: `gh run download <run-id> --repo hoangvi1810-jpg/NotelyVoice 
 - Màn hình `ModelSelectionScreen.kt` (khác với card tóm tắt trong Settings) vẫn hiện sai
   dung lượng model cho tiếng Việt (465MB thay vì 547MB thật) — phát hiện khi bấm thử trên
   emulator, đã sửa.
+- **Crash thật trên iOS khi mở Settings** (xác nhận bằng video bạn gửi): `SettingsScreen`
+  render `AiSettingsSection`, phần này có `LaunchedEffect(Unit)` tự đọc Keychain
+  (`aiRepository.getApiKey()`) ngay khi vừa xuất hiện trên màn hình — không cần bấm gì.
+  Code Keychain trên iOS (`SecureKeyStore.ios.kt`) xây câu truy vấn bằng
+  `NSMutableDictionary` và bridge các hằng số `kSec*` không nhất quán (có chỗ coi là đã sở
+  hữu reference qua `CFBridgingRelease`, có chỗ nhét thẳng con trỏ CFStringRef chưa sở
+  hữu) → lệch retain/release → crash khi đọc lẫn khi lưu. Đã viết lại toàn bộ bằng
+  `CFMutableDictionary` thuần (`CFDictionaryCreateMutable`/`CFDictionarySetValue`): hằng số
+  `kSec*` (không sở hữu) nhét thẳng vào, chỉ những giá trị tự tạo (chuỗi service/account,
+  dữ liệu key) mới `CFBridgingRetain` để khớp đúng +1 mà dictionary cần. **Rủi ro:** bản
+  sửa này ban đầu bị làm ở một bản copy code khác trên máy (nhánh Git tách rời, chưa từng
+  push) — mất một lúc mới phát hiện ra và ghép lại đúng chỗ đang chạy thật. Bài học: khi
+  nghi ngờ "mình đã sửa cái này rồi mà" — kiểm tra `git log` ở **cả hai** thư mục
+  (`C:\dev\notely-repo` và bản OneDrive) trước khi kết luận.
 
 ### Đã test trực tiếp trên Android emulator (ảnh chụp màn hình thật, không phải suy đoán)
-- Theme be/caramel lên đúng toàn bộ app, kể cả các chỗ tím ẩn
-- Onboarding, Home, Settings, Model Selection: không crash
+- Giao diện tím mới lên đúng toàn bộ app, cả sáng lẫn tối, hiệu ứng bấm "giọt nước" hoạt
+  động
+- Onboarding, Home, Settings, Model Selection: không crash (test lại y hệt bước trong
+  video bạn gửi, trên Android — không tái hiện được crash ở đây, vì bug nằm riêng ở code
+  Keychain của iOS)
 - Giao diện 4 tab AI Note/Highlights/Summary/Transcript: hoạt động đúng
 - Banner lỗi "Chưa cấu hình OpenRouter API key" hiện đúng khi bấm "Tạo với AI" mà chưa có
   key
 - Note Template bottom sheet: cả 5 template hiện đúng, tiếng Việt có dấu render sạch
+- **Chưa test được trên iPhone thật** — đây vẫn là rủi ro lớn nhất, vì bản vá Keychain vừa
+  nói ở trên chưa từng compile bằng Xcode thật (máy này không có Mac)
 
 ### Thông tin kỹ thuật (để tham khảo khi cần)
-- Repo fork của bạn: https://github.com/hoangvi1810-jpg/NotelyVoice (nhánh `main`)
-- Commit mới nhất: `7d8e9fa` — "Fix Model Selection screen showing wrong size..."
-- Lần build iOS thành công: run `34192470017` (24 phút 16 giây, **chưa có bản vá Model
-  Selection** — nếu muốn bản mới nhất phải build lại, xem mục "Build lại" ở trên)
-  → https://github.com/hoangvi1810-jpg/NotelyVoice/actions/runs/34192470017
-- File `.ipa` (bản cũ hơn 1 commit) đã tải sẵn tại:
-  `C:\Users\hoang\OneDrive\Desktop\CLAUDE CODE\notely-ios-build\notely-voice-unsigned-ipa\NotelyVoice-unsigned.ipa`
+- Repo fork của bạn: https://github.com/hoangvi1810-jpg/NotelyVoice (nhánh
+  `feature/vietnamese-ai-notes`)
+- Commit mới nhất: `71ef4aa` — "AI Note tab: all 5 templates output English, not just
+  Classic"
+- Build iOS mới nhất (thành công): run `34248208233` (giao diện tím + bản vá Keychain +
+  **toàn bộ tab AI Note luôn ra tiếng Anh** (cả 5 template: Classic/Brainstorm/Meeting/
+  Lecture/Journaling) trong khi Highlights/Summary/Transcript vẫn tiếng Việt + nút "Dán"
+  cho ô API key) → https://github.com/hoangvi1810-jpg/NotelyVoice/actions/runs/34248208233
+  — file `.ipa` đã tải về sẵn tại
+  `notely-ios-build\notely-voice-unsigned-ipa-fixed\notely-voice-unsigned-ipa\` (xem mục
+  "Việc cần làm ngay" ở trên, **đừng dùng file cũ trong
+  `notely-ios-build\notely-voice-unsigned-ipa\` nữa**)
 - Sideloadly đã cài sẵn tại: `C:\Users\hoang\AppData\Local\Sideloadly\sideloadly.exe`
 - Android SDK + JDK + emulator cài tại `C:\dev-tools\` (JDK: `jdk-17.0.13+11`, SDK:
   `android-sdk`), AVD tên `NotelyTest` (Pixel 6, Android 14)
@@ -166,8 +239,10 @@ Tải kết quả: `gh run download <run-id> --repo hoangvi1810-jpg/NotelyVoice 
 - **Chưa test được việc gọi AI thật** (cần API key thật, key cũ đã lộ nên chưa dùng lại
   để test) — mọi thứ về UI/luồng lỗi đã xác nhận đúng, chỉ còn thiếu bước gọi API thành
   công thực tế.
-- **Chưa test trên iPhone thật** — phần Keychain (SecureKeyStore.ios.kt) chỉ chạy thật
-  lần đầu khi mở app trên thiết bị iOS, đây là rủi ro lớn nhất còn lại.
+- **Chưa test trên iPhone thật** — bản vá Keychain (`SecureKeyStore.ios.kt`) chỉ chạy thật
+  lần đầu khi mở app trên thiết bị iOS thật, đây là rủi ro lớn nhất còn lại. Nếu sideload
+  xong vẫn crash ở Settings, đó là manh mối cực kỳ quý — báo lại ngay kèm mô tả/video.
 - Nút "tóm tắt nhanh" trên màn hình ghi âm (khác tab Summary) vẫn dùng công nghệ cũ,
   không hỗ trợ tiếng Việt — cố ý giữ vì đổi sẽ tốn thêm tiền gọi API cho một tính năng
   phụ, đã ghi rõ lý do trong code.
+- Icon/logo app mới (ảnh con khỉ xanh bạn gửi) — cố ý để sau, chưa làm trong đợt này.
