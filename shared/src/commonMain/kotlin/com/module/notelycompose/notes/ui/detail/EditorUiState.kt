@@ -9,6 +9,7 @@ import com.module.notelycompose.notes.extension.TEXT_SIZE_TITLE
 
 data class EditorUiState(
     val content: TextFieldValue = TextFieldValue(""),
+    val title: String = "",
     val formats: List<TextUiFormat> = emptyList(),
     val textAlign: TextAlign = TextAlign.Left,
     val selectionSize: TextFormatUiOption = TextUiFormats.Body,

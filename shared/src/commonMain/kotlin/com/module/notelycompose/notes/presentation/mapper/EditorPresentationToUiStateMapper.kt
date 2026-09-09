@@ -13,6 +13,7 @@ class EditorPresentationToUiStateMapper {
     fun mapToUiState(presentationState: EditorPresentationState): EditorUiState {
         return EditorUiState(
             content = presentationState.content,
+            title = presentationState.title,
             formats = presentationState.formats.map { mapToTextFormat(it) },
             textAlign = presentationState.textAlign,
             selectionSize = mapToTextFormatUiOption(presentationState.selectionSize),

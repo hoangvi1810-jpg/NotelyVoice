@@ -15,6 +15,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -33,6 +35,7 @@ import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.rememberDismissState
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -84,6 +87,10 @@ import com.module.notelycompose.resources.confirmation_cancel
 import com.module.notelycompose.resources.download_dialog_error
 import com.module.notelycompose.resources.ic_transcription
 import com.module.notelycompose.resources.note_detail_recorder
+import com.module.notelycompose.resources.rename_note_dialog_cancel
+import com.module.notelycompose.resources.rename_note_dialog_save
+import com.module.notelycompose.resources.rename_note_dialog_title
+import com.module.notelycompose.resources.top_bar_my_note
 import com.module.notelycompose.resources.transcription_icon
 import com.module.notelycompose.resources.vectors.IcRecorder
 import com.module.notelycompose.resources.vectors.Images
@@ -132,6 +139,7 @@ fun NoteDetailScreen(
     var isFabVisible by remember { mutableStateOf(true) }
     var selectedTab by remember { mutableStateOf(NoteDetailTab.AI_NOTE) }
     var showTemplateSheet by remember { mutableStateOf(false) }
+    var showRenameDialog by remember { mutableStateOf(false) }
     val aiUiState by noteAiViewModel.uiState.collectAsStateWithLifecycle()
 
     LaunchedEffect(currentNoteId) {
@@ -185,10 +193,12 @@ fun NoteDetailScreen(
     Scaffold(
         topBar = {
             DetailNoteTopBar(
+                title = editorState.title.ifBlank { stringResource(Res.string.top_bar_my_note) },
                 onNavigateBack = navigateBack,
                 onShare = {
                     showShareDialog = true
                 },
+                onRenameClick = { showRenameDialog = true },
                 onCopy = {
                     platformViewModel.onCopy(editorState.content.text)
                 },
@@ -421,6 +431,46 @@ fun NoteDetailScreen(
         )
     }
 
+    if (showRenameDialog) {
+        var renameInput by remember(editorState.title) {
+            mutableStateOf(editorState.title)
+        }
+        AlertDialog(
+            onDismissRequest = { showRenameDialog = false },
+            title = { Text(stringResource(Res.string.rename_note_dialog_title)) },
+            text = {
+                OutlinedTextField(
+                    value = renameInput,
+                    onValueChange = { renameInput = it },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            buttons = {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(8.dp),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    Button(onClick = { showRenameDialog = false }) {
+                        Text(stringResource(Res.string.rename_note_dialog_cancel))
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Button(
+                        onClick = {
+                            val trimmed = renameInput.trim()
+                            if (trimmed.isNotBlank()) {
+                                editorViewModel.updateTitle(trimmed)
+                            }
+                            showRenameDialog = false
+                        }
+                    ) {
+                        Text(stringResource(Res.string.rename_note_dialog_save))
+                    }
+                }
+            }
+        )
+    }
+
     ImportingAudioStateHost(
         state = importingState,
         onSuccess = editorViewModel::onUpdateRecordingPath,
@@ -462,17 +512,20 @@ private fun NoteContent(
 ) {
     val coroutineScope = rememberCoroutineScope()
     var showDeleteRecordingDialog by remember { mutableStateOf(false) }
-    val scrollState = rememberScrollState()
     val dismissState = rememberDismissState()
-    LaunchedEffect(editorState.content) {
-        scrollState.animateScrollTo(scrollState.maxValue)
-    }
 
+    // This container must NOT also be verticalScroll: NoteEditor's BasicTextField already owns
+    // a verticalScroll for its (potentially very long) text, and nesting a second verticalScroll
+    // around a Modifier.weight(1f) child gives that child unbounded height to measure against,
+    // which is undefined/broken sizing. That was the root cause of the cursor disappearing into a
+    // blank area when the keyboard opened -- BasicTextField's built-in "scroll to keep the cursor
+    // visible" had no sane bounded viewport to scroll within. Keeping this Column fixed-size (only
+    // imePadding shrinks it for the keyboard) lets NoteEditor's own scroll be the single, correctly
+    // bounded scrollable region.
     Column(
         modifier = modifier
             .fillMaxSize()
             .padding(paddingValues)
-            .verticalScroll(scrollState)
             .background(LocalCustomColors.current.bodyBackgroundColor)
             .imePadding()
     ) {

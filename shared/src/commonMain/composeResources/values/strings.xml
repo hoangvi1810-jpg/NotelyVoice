@@ -19,6 +19,10 @@
     <string name="top_bar_export_as_pdf">Export Text as PDF</string>
     <string name="top_bar_export_as_txt">Export as Text File</string>
     <string name="top_bar_export_as_markdown">Export as Markdown</string>
+    <string name="top_bar_rename_note">Rename note</string>
+    <string name="rename_note_dialog_title">Rename note</string>
+    <string name="rename_note_dialog_save">Save</string>
+    <string name="rename_note_dialog_cancel">Cancel</string>
     <!-- Delete Dialog -->
     <string name="confirmation">Confirm</string>
     <string name="confirmation_text">Do you want to delete the Note? This action cannot be undone</string>

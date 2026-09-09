@@ -76,6 +76,7 @@ class TextEditorViewModel(
     private fun processNote(retrievedNote: NoteDomainModel) {
         viewModelScope.launch {
             loadNote(
+                title = retrievedNote.title,
                 content = retrievedNote.content,
                 formats = retrievedNote.formatting.map {
                     textFormatPresentationMapper.mapToPresentationModel(it)
@@ -99,8 +100,15 @@ class TextEditorViewModel(
 
     fun onUpdateContent(newContent: TextFieldValue) {
         updateContent(newContent)
+        val isCustomTitle = _editorPresentationState.value.isCustomTitle
+        // Once a title has been set independently (manual rename or AI auto-title), further body
+        // edits must not silently overwrite it -- only mirror content into title for notes nobody
+        // has ever renamed, same as the app's original behavior.
+        if (!isCustomTitle) {
+            _editorPresentationState.update { it.copy(title = newContent.text) }
+        }
         createOrUpdateEvent(
-            title = newContent.text,
+            title = if (isCustomTitle) _editorPresentationState.value.title else newContent.text,
             content = newContent.text,
             starred = _editorPresentationState.value.starred,
             formatting = _editorPresentationState.value.formats,
@@ -134,6 +142,7 @@ class TextEditorViewModel(
     )
 
     private fun loadNote(
+        title: String,
         content: String,
         formats: List<TextPresentationFormat>,
         textAlign: TextAlign,
@@ -145,6 +154,11 @@ class TextEditorViewModel(
         _editorPresentationState.update {
             it.copy(
                 content = TextFieldValue(content),
+                title = title,
+                // Title and content start out identical for every note (see onUpdateContent) --
+                // if they differ, someone already renamed it (manually or via AI auto-title)
+                // before this session, so don't resume clobbering it as the user keeps typing.
+                isCustomTitle = title.isNotBlank() && title != content,
                 formats = formats,
                 textAlign = textAlign,
                 recording = recordingPath(recordingPath),
@@ -160,14 +174,17 @@ class TextEditorViewModel(
     }
 
     /**
-     * Sets a short, AI-generated title distinct from the note's content (title and content are
-     * otherwise always kept identical — see [onUpdateContent]). Called once per note, right after
-     * its first AI Note generation — see NoteAiViewModel.generatedTitle.
+     * Sets a title distinct from the note's content (title and content are otherwise always kept
+     * identical — see [onUpdateContent]) and marks it as custom so further body edits stop
+     * mirroring into it. Used both by the manual rename UI and by the AI auto-title feature,
+     * called once per note right after its first AI Note generation — see
+     * NoteAiViewModel.generatedTitle.
      */
     fun updateTitle(title: String) {
         val noteId = _currentNoteId.value
         if (noteId == null || noteId == ID_NOT_SET) return
         val state = _editorPresentationState.value
+        _editorPresentationState.update { it.copy(title = title, isCustomTitle = true) }
         updateNote(
             noteId = noteId,
             title = title,
