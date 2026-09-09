@@ -172,6 +172,12 @@ fun NoteDetailScreen(
     // notebook change made afterward.
     var pendingNotebook by remember { mutableStateOf(pendingNotebookId) }
 
+    // A note reached through a notebook (either brand-new, via pendingNotebook before its first
+    // save, or already assigned in the DB) is a typed note and must never offer recording -- that
+    // is exactly how a "note" ends up with audio attached and bleeds into the voice-note world the
+    // notebook screens are supposed to be walled off from.
+    val isNotebookNote = pendingNotebook != null || currentNotebookId != null
+
     LaunchedEffect(currentNoteId) {
         currentNoteId?.takeIf { it != 0L }?.let { id ->
             attachmentViewModel.setNoteId(id)
@@ -288,53 +294,56 @@ fun NoteDetailScreen(
             )
         },
         floatingActionButton = {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                if (editorState.recording.isRecordingExist) {
+            // Typed notes (opened through a notebook) never show the recording FAB at all -- see
+            // isNotebookNote above.
+            if (!isNotebookNote) {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    if (editorState.recording.isRecordingExist) {
+                        AnimatedVisibility(
+                            visible = isFabVisible,
+                            enter = fadeIn() + slideInVertically(initialOffsetY = { it }),
+                            exit = fadeOut() + slideOutVertically(targetOffsetY = { it })
+                        ) {
+                            NotelyFab(
+                                onClick = { downloaderViewModel.checkTranscriptionAvailability() },
+                                containerColor = LocalCustomColors.current.surface,
+                                contentColor = LocalCustomColors.current.onSurfaceVariant,
+                                size = 48.dp,
+                                cornerRadius = 24.dp
+                            ) {
+                                Icon(
+                                    painter = painterResource(Res.drawable.ic_transcription),
+                                    contentDescription = stringResource(Res.string.transcription_icon),
+                                    tint = LocalCustomColors.current.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+
                     AnimatedVisibility(
                         visible = isFabVisible,
                         enter = fadeIn() + slideInVertically(initialOffsetY = { it }),
                         exit = fadeOut() + slideOutVertically(targetOffsetY = { it })
                     ) {
                         NotelyFab(
-                            onClick = { downloaderViewModel.checkTranscriptionAvailability() },
-                            containerColor = LocalCustomColors.current.surface,
-                            contentColor = LocalCustomColors.current.onSurfaceVariant,
-                            size = 48.dp,
-                            cornerRadius = 24.dp
+                            onClick = {
+                                if (!editorState.recording.isRecordingExist) {
+                                    navigateToRecorder("$currentNoteId")
+                                } else {
+                                    showExistingRecordConfirmDialog = true
+                                }
+                            },
+                            size = 56.dp,
+                            cornerRadius = 28.dp
                         ) {
                             Icon(
-                                painter = painterResource(Res.drawable.ic_transcription),
-                                contentDescription = stringResource(Res.string.transcription_icon),
-                                tint = LocalCustomColors.current.onSurfaceVariant
+                                imageVector = Images.Icons.IcRecorder,
+                                contentDescription = stringResource(Res.string.note_detail_recorder),
+                                tint = LocalCustomColors.current.onAccent
                             )
                         }
                     }
                 }
-
-                AnimatedVisibility(
-                    visible = isFabVisible,
-                    enter = fadeIn() + slideInVertically(initialOffsetY = { it }),
-                    exit = fadeOut() + slideOutVertically(targetOffsetY = { it })
-                ) {
-                    NotelyFab(
-                        onClick = {
-                            if (!editorState.recording.isRecordingExist) {
-                                navigateToRecorder("$currentNoteId")
-                            } else {
-                                showExistingRecordConfirmDialog = true
-                            }
-                        },
-                        size = 56.dp,
-                        cornerRadius = 28.dp
-                    ) {
-                        Icon(
-                            imageVector = Images.Icons.IcRecorder,
-                            contentDescription = stringResource(Res.string.note_detail_recorder),
-                            tint = LocalCustomColors.current.onAccent
-                        )
-                    }
-                }
-
             }
         },
         floatingActionButtonPosition = FabPosition.End,
@@ -411,6 +420,9 @@ fun NoteDetailScreen(
                             isTextFieldFocused = it
                         },
                         onFabVisibility = { isFabVisible = it },
+                        // Attachments are a typed-note feature only -- a voice note's Transcript
+                        // tab renders through this same NoteContent, and must not offer them.
+                        showAttachments = !hasAiContext,
                         attachments = attachments,
                         onAddAttachmentClick = {
                             // A brand-new note has no id yet (it's inserted on first keystroke),
@@ -579,6 +591,7 @@ private fun NoteContent(
     textEditorViewModel: TextEditorViewModel,
     audioPlayerViewModel: AudioPlayerViewModel,
     onFabVisibility: (Boolean) -> Unit,
+    showAttachments: Boolean,
     attachments: List<com.module.notelycompose.attachment.Attachment>,
     onAddAttachmentClick: () -> Unit,
     onRemoveAttachment: (Long) -> Unit,
@@ -668,20 +681,22 @@ private fun NoteContent(
                 onFabVisibility = onFabVisibility
             )
 
-            if (attachments.isEmpty()) {
-                // AttachmentStrip hides itself entirely when empty (so notes without attachments
-                // render exactly as before this feature existed) -- this is the one always-visible
-                // entry point to add the first one.
-                Box(modifier = Modifier.padding(start = 20.dp, bottom = 8.dp)) {
-                    AddAttachmentButton(onClick = onAddAttachmentClick)
+            if (showAttachments) {
+                if (attachments.isEmpty()) {
+                    // AttachmentStrip hides itself entirely when empty (so notes without
+                    // attachments render exactly as before this feature existed) -- this is the
+                    // one always-visible entry point to add the first one.
+                    Box(modifier = Modifier.padding(start = 20.dp, bottom = 8.dp)) {
+                        AddAttachmentButton(onClick = onAddAttachmentClick)
+                    }
+                } else {
+                    AttachmentStrip(
+                        attachments = attachments,
+                        onAddClick = onAddAttachmentClick,
+                        onRemove = onRemoveAttachment,
+                        onOpen = onOpenAttachment
+                    )
                 }
-            } else {
-                AttachmentStrip(
-                    attachments = attachments,
-                    onAddClick = onAddAttachmentClick,
-                    onRemove = onRemoveAttachment,
-                    onOpen = onOpenAttachment
-                )
             }
         }
     }

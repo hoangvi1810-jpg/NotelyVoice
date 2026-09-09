@@ -1,5 +1,6 @@
 package com.module.notelycompose.attachment.ui
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
@@ -36,20 +37,24 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.module.notelycompose.attachment.Attachment
 import com.module.notelycompose.attachment.AttachmentKind
+import com.module.notelycompose.attachment.readAttachmentBytes
 import com.module.notelycompose.notes.ui.theme.LocalCustomColors
+import org.jetbrains.compose.resources.ExperimentalResourceApi
+import org.jetbrains.compose.resources.decodeToImageBitmap
 
 /**
  * The row of attachment cards under a note's body, plus a trailing "+" card. Hidden entirely when
  * there are no attachments, so notes without any look exactly as they did before this feature
  * existed — use [AddAttachmentButton] for the always-visible entry point next to the toolbar.
  *
- * Cards show a kind icon and filename rather than a real thumbnail: this project has no image-
- * loading library yet (Coil, Kamel, ...), and adding one purely for this is more risk than it is
- * worth given the iOS side of this feature cannot be compiled locally — see AttachmentPicker.ios.kt.
+ * Image attachments render a real thumbnail (decoded on demand from disk, no caching beyond
+ * Compose's own `remember`); video/PDF cards show a kind icon and filename only.
  */
 @Composable
 fun AttachmentStrip(
@@ -123,6 +128,7 @@ private fun AddAttachmentCard(onClick: () -> Unit) {
     }
 }
 
+@OptIn(ExperimentalResourceApi::class)
 @Composable
 private fun AttachmentCard(
     attachment: Attachment,
@@ -138,6 +144,18 @@ private fun AttachmentCard(
         AttachmentKind.PDF -> Icons.Default.Description
     }
 
+    val thumbnail: ImageBitmap? = if (attachment.kind == AttachmentKind.IMAGE) {
+        remember(attachment.path) {
+            try {
+                readAttachmentBytes(attachment.path)?.decodeToImageBitmap()
+            } catch (e: Exception) {
+                null
+            }
+        }
+    } else {
+        null
+    }
+
     Box(
         modifier = Modifier
             .size(width = 88.dp, height = 96.dp)
@@ -150,25 +168,34 @@ private fun AttachmentCard(
                 onLongClick = { confirmingRemove = true }
             )
     ) {
-        Column(
-            modifier = Modifier.fillMaxSize().padding(8.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = colors.accent,
-                modifier = Modifier.size(28.dp)
+        if (thumbnail != null) {
+            Image(
+                bitmap = thumbnail,
+                contentDescription = attachment.displayName,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop
             )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = attachment.displayName,
-                style = MaterialTheme.typography.labelSmall,
-                color = colors.onSurfaceVariant,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
-            )
+        } else {
+            Column(
+                modifier = Modifier.fillMaxSize().padding(8.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = colors.accent,
+                    modifier = Modifier.size(28.dp)
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = attachment.displayName,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = colors.onSurfaceVariant,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
         }
 
         if (confirmingRemove) {

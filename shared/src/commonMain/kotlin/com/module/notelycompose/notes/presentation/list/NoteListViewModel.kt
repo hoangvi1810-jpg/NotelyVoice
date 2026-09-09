@@ -129,14 +129,16 @@ class NoteListViewModel(
         query: String
     ) {
 
-        val presentationNotes = notes.map { domainToPresentationModel(it) }
-        val allNotesSizeStr = if (presentationNotes.isEmpty()) "" else "(${presentationNotes.size})"
+        // Home is voice-recording-only: typed notes live in their notebook screen instead
+        // (see NotebookNotesScreen), never mixed into this list.
+        val voiceNotes = notes.map { domainToPresentationModel(it) }.filter { isVoiceNote(it) }
+        val allNotesSizeStr = if (voiceNotes.isEmpty()) "" else "(${voiceNotes.size})"
 
         _state.update { currentState ->
             currentState.copy(
-                originalNotes = presentationNotes,
-                filteredNotes = applyFilters(presentationNotes, selectedTabIndex, query),
-                showEmptyContent = presentationNotes.isEmpty(),
+                originalNotes = voiceNotes,
+                filteredNotes = applyFilters(voiceNotes, selectedTabIndex, query),
+                showEmptyContent = voiceNotes.isEmpty(),
                 allNotesSizeStr = allNotesSizeStr
             )
         }
