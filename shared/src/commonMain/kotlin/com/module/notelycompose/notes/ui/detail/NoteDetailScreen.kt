@@ -373,12 +373,16 @@ fun NoteDetailScreen(
                 onTitleChange = editorViewModel::updateTitle
             )
 
-            NotebookRow(
-                notebookName = notebookState.notebooks
-                    .firstOrNull { it.id == currentNotebookId }
-                    ?.name,
-                onClick = { showNotebookSheet = true }
-            )
+            // Notebook categorisation is a typed-note-only concept -- a voice note (opened from
+            // Home's mic FAB) must never show it, same reasoning as hiding the mic FAB above.
+            if (isNotebookNote) {
+                NotebookRow(
+                    notebookName = notebookState.notebooks
+                        .firstOrNull { it.id == currentNotebookId }
+                        ?.name,
+                    onClick = { showNotebookSheet = true }
+                )
+            }
 
             // A typed note that has never been recorded and never had AI content generated has
             // nothing for the AI Note/Highlights/Summary tabs to show -- rendering them anyway is
@@ -420,9 +424,10 @@ fun NoteDetailScreen(
                             isTextFieldFocused = it
                         },
                         onFabVisibility = { isFabVisible = it },
-                        // Attachments are a typed-note feature only -- a voice note's Transcript
-                        // tab renders through this same NoteContent, and must not offer them.
-                        showAttachments = !hasAiContext,
+                        // Attachments are a notebook (typed-note) feature only -- a voice note
+                        // (Home's mic FAB, isNotebookNote == false) must never offer them, whether
+                        // it's brand-new or its Transcript tab is what's currently showing here.
+                        showAttachments = isNotebookNote,
                         attachments = attachments,
                         onAddAttachmentClick = {
                             // A brand-new note has no id yet (it's inserted on first keystroke),
