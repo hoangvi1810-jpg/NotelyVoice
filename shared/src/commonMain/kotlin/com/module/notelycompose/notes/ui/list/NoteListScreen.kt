@@ -13,12 +13,16 @@ import androidx.compose.material.Icon
 import androidx.compose.material.Scaffold
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.rememberDrawerState
 import com.module.notelycompose.ui.components.NotelyFab
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -29,7 +33,7 @@ import com.module.notelycompose.export.presentation.ExportSelectionViewModel
 import com.module.notelycompose.export.ui.ExportSelectedItemConfirmationDialog
 import com.module.notelycompose.export.ui.NoSelectionErrorDialog
 import com.module.notelycompose.notebook.NotebookViewModel
-import com.module.notelycompose.notebook.ui.NotebookFilterBar
+import com.module.notelycompose.notebook.ui.NotebookDrawerContent
 import com.module.notelycompose.notebook.ui.NotebookManagerSheet
 import com.module.notelycompose.notes.presentation.list.NoteListIntent
 import com.module.notelycompose.notes.presentation.list.NoteListViewModel
@@ -42,6 +46,7 @@ import com.module.notelycompose.resources.cancel
 import com.module.notelycompose.resources.export
 import com.module.notelycompose.resources.ic_cancel_all
 import com.module.notelycompose.resources.note_list_add_note
+import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import com.module.notelycompose.resources.ic_export_selections
@@ -52,6 +57,7 @@ fun NoteListScreen(
     navigateToSettings: () -> Unit,
     navigateToNoteDetails: (String) -> Unit,
     navigateToExportNotes: () -> Unit,
+    navigateToNotebookNotes: (Long?) -> Unit,
     viewModel: NoteListViewModel = koinViewModel(),
     exportViewModel: ExportSelectionViewModel = koinViewModel(),
     notebookViewModel: NotebookViewModel = koinViewModel(),
@@ -64,16 +70,27 @@ fun NoteListScreen(
     var showNoSelectionDialog by remember { mutableStateOf(false) }
     var isEmptySelection by remember { mutableStateOf(false) }
     val notebookState by notebookViewModel.state.collectAsState()
-    var selectedNotebookId by remember { mutableStateOf<Long?>(null) }
     var showNotebookManager by remember { mutableStateOf(false) }
+    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
+    val drawerScope = rememberCoroutineScope()
 
+    ModalNavigationDrawer(
+        drawerState = drawerState,
+        drawerContent = {
+            NotebookDrawerContent(
+                notebooks = notebookState.notebooks,
+                onSelectAll = { drawerScope.launch { drawerState.close() }; navigateToNotebookNotes(null) },
+                onSelectNotebook = { id -> drawerScope.launch { drawerState.close() }; navigateToNotebookNotes(id) },
+                onCreateNotebook = notebookViewModel::create,
+                onManage = { showNotebookManager = true }
+            )
+        }
+    ) {
     Scaffold(
             topBar = {
                 TopBar(
-                    // Was a hamburger opening a quick-settings sheet that only duplicated the
-                    // full Settings screen behind the gear icon on the right.
-                    onCreateNoteClicked = {
-                        navigateToNoteDetails(Arguments.DEFAULT_NOTE_ID)
+                    onMenuClicked = {
+                        drawerScope.launch { drawerState.open() }
                     },
                     onSettingsClicked = {
                       navigateToSettings()
@@ -144,21 +161,8 @@ fun NoteListScreen(
                     },
                     allSizeStr = notesListState.allNotesSizeStr
                 )
-                NotebookFilterBar(
-                    notebooks = notebookState.notebooks,
-                    selectedNotebookId = selectedNotebookId,
-                    onSelect = { selectedNotebookId = it },
-                    onManage = { showNotebookManager = true }
-                )
                 NoteList(
-                    noteList = viewModel.onGetUiState(notesListState).let { notes ->
-                        val notebookId = selectedNotebookId
-                        if (notebookId == null) {
-                            notes
-                        } else {
-                            notes.filter { notebookState.assignments[it.id] == notebookId }
-                        }
-                    },
+                    noteList = viewModel.onGetUiState(notesListState),
                     onNoteClicked = { id ->
                         navigateToNoteDetails("$id")
                     },
@@ -177,15 +181,13 @@ fun NoteListScreen(
                 if(notesListState.showEmptyContent) EmptyNoteUi(platformUiState.isTablet)
             }
         }
+    }
 
     if (showNotebookManager) {
         NotebookManagerSheet(
             notebooks = notebookState.notebooks,
             onRename = notebookViewModel::rename,
-            onDelete = { notebookId ->
-                if (selectedNotebookId == notebookId) selectedNotebookId = null
-                notebookViewModel.delete(notebookId)
-            },
+            onDelete = notebookViewModel::delete,
             onDismiss = { showNotebookManager = false }
         )
     }

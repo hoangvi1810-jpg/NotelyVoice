@@ -59,19 +59,22 @@ fun AttachmentPickerMenu(
             AttachmentOptionRow(
                 icon = Icons.Default.Image,
                 label = "Ảnh",
-                onClick = { onDismiss(); onPickImage() }
+                // Request the native picker BEFORE dismissing this Dialog, not after: on iOS,
+                // presenting a new view controller while this one is still mid-dismiss animation
+                // is a well-known way for the presentation to be silently dropped.
+                onClick = { onPickImage(); onDismiss() }
             )
             Spacer(modifier = Modifier.height(8.dp))
             AttachmentOptionRow(
                 icon = Icons.Default.PlayArrow,
                 label = "Video",
-                onClick = { onDismiss(); onPickVideo() }
+                onClick = { onPickVideo(); onDismiss() }
             )
             Spacer(modifier = Modifier.height(8.dp))
             AttachmentOptionRow(
                 icon = Icons.Default.Description,
                 label = "Tệp PDF",
-                onClick = { onDismiss(); onPickDocument() }
+                onClick = { onPickDocument(); onDismiss() }
             )
         }
     }

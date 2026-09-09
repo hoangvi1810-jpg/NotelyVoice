@@ -2,7 +2,6 @@ package com.module.notelycompose.notes.presentation.helpers
 
 import kotlinx.datetime.LocalDateTime
 
-const val DEFAULT_CONTENT = "No additional text"
 const val NEW_LINE = "\n"
 const val ELLIPSIS = "..."
 const val DEFAULT_MAX_LENGTH = 20
@@ -31,7 +30,7 @@ fun String.getFirstNonEmptyLineAfterFirst(): String {
             }
         }
     }
-    return DEFAULT_CONTENT
+    return ""
 }
 
 fun LocalDateTime.formattedDate(): String {

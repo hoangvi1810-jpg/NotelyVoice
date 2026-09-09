@@ -193,16 +193,48 @@ class TextEditorViewModel(
         textAlign: TextAlign,
         recordingPath: String
     ) {
-        viewModelScope.launch {
-            _currentNoteId.value = insertNoteUseCase.execute(
-                title = title,
-                content = content,
-                starred = starred,
-                formatting = formatting.map { textFormatPresentationMapper.mapToDomainModel(it) },
-                textAlign = textAlignPresentationMapper.mapToDomainModel(textAlign),
-                recordingPath = recordingPath
-            )
-        }
+        viewModelScope.launch { insertNoteNow(title, content, starred, formatting, textAlign, recordingPath) }
+    }
+
+    private suspend fun insertNoteNow(
+        title: String,
+        content: String,
+        starred: Boolean,
+        formatting: List<TextPresentationFormat>,
+        textAlign: TextAlign,
+        recordingPath: String
+    ): Long? {
+        val id = insertNoteUseCase.execute(
+            title = title,
+            content = content,
+            starred = starred,
+            formatting = formatting.map { textFormatPresentationMapper.mapToDomainModel(it) },
+            textAlign = textAlignPresentationMapper.mapToDomainModel(textAlign),
+            recordingPath = recordingPath
+        )
+        _currentNoteId.value = id
+        return id
+    }
+
+    /**
+     * Attaching a file (or anything else keyed on a real note id) needs a saved row to exist —
+     * a brand-new note stays at id 0 until the first keystroke inserts it. Tapping "Đính kèm"
+     * before typing anything used to silently no-op: [AttachmentViewModel.pick] bails on a null
+     * noteId with no error, so the picker never opened and nothing told the user why. Called
+     * before opening the attachment menu so an empty note gets its row created on demand.
+     */
+    suspend fun ensureNoteSaved(): Long {
+        val existing = _currentNoteId.value
+        if (existing != null && existing != ID_NOT_SET) return existing
+        val state = _editorPresentationState.value
+        return insertNoteNow(
+            title = state.title,
+            content = state.content.text,
+            starred = state.starred,
+            formatting = state.formats,
+            textAlign = state.textAlign,
+            recordingPath = state.recording.recordingPath
+        ) ?: ID_NOT_SET
     }
 
     private fun updateNote(

@@ -114,6 +114,8 @@ fun NoteDetailScreen(
     navigateToRecorder: (noteId: String) -> Unit,
     navigateToTranscription: () -> Unit,
     onNavigateToSettingsText: () -> Unit,
+    // Set only when this screen was opened from a notebook's "+" -- see Routes.Details.
+    pendingNotebookId: Long? = null,
     audioPlayerViewModel: AudioPlayerViewModel = koinViewModel(),
     downloaderViewModel: ModelDownloaderViewModel = koinViewModel(),
     platformViewModel: PlatformViewModel = koinViewModel(),
@@ -163,9 +165,19 @@ fun NoteDetailScreen(
     val currentNotebookId = currentNoteId?.let { notebookState.assignments[it] }
     val attachments by attachmentViewModel.attachments.collectAsStateWithLifecycle()
     var showAttachmentMenu by remember { mutableStateOf(false) }
+    val screenScope = rememberCoroutineScope()
+    // A brand-new note stays at id 0 until the first keystroke inserts it, so the notebook this
+    // screen was opened for can't be assigned until then -- consumed exactly once, the first time
+    // currentNoteId turns into a real id, so it never re-fires and never overrides a manual
+    // notebook change made afterward.
+    var pendingNotebook by remember { mutableStateOf(pendingNotebookId) }
 
     LaunchedEffect(currentNoteId) {
-        currentNoteId?.takeIf { it != 0L }?.let { attachmentViewModel.setNoteId(it) }
+        currentNoteId?.takeIf { it != 0L }?.let { id ->
+            attachmentViewModel.setNoteId(id)
+            pendingNotebook?.let { notebookViewModel.assign(id, it) }
+            pendingNotebook = null
+        }
     }
 
     // What the copy/share actions act on: whatever the user is actually looking at. Previously
@@ -400,7 +412,17 @@ fun NoteDetailScreen(
                         },
                         onFabVisibility = { isFabVisible = it },
                         attachments = attachments,
-                        onAddAttachmentClick = { showAttachmentMenu = true },
+                        onAddAttachmentClick = {
+                            // A brand-new note has no id yet (it's inserted on first keystroke),
+                            // so attachmentViewModel's noteId stays null and pick() would
+                            // silently no-op -- save the row now so the picker always has
+                            // somewhere to attach to, even on an empty note.
+                            screenScope.launch {
+                                val id = editorViewModel.ensureNoteSaved()
+                                attachmentViewModel.setNoteId(id)
+                                showAttachmentMenu = true
+                            }
+                        },
                         onRemoveAttachment = attachmentViewModel::remove,
                         onOpenAttachment = attachmentViewModel::open
                     )
@@ -765,26 +787,37 @@ private fun NoteEditor(
             }
     }
 
-    val transformation = VisualTransformation { text ->
-        TransformedText(
-            buildAnnotatedString {
-                append(text)
-                editorState.formats.forEach { format ->
-                    addStyle(
-                        SpanStyle(
-                            fontWeight = if (format.isBold) FontWeight.Bold else null,
-                            fontStyle = if (format.isItalic) FontStyle.Italic else null,
-                            textDecoration = if (format.isUnderline)
-                                TextDecoration.Underline else null,
-                            fontSize = format.textSize?.sp ?: TextUnit.Unspecified
-                        ),
-                        format.range.first.coerceIn(0, text.length),
-                        format.range.last.coerceIn(0, text.length)
-                    )
-                }
-            },
-            OffsetMapping.Identity
-        )
+    // Compose Multiplatform's iOS text-actions menu (copy/paste) breaks for any BasicTextField
+    // that carries a non-null VisualTransformation, even one that changes nothing -- a known gap
+    // in the CMP version this project is pinned to (fixed only in 1.9.3+/1.12.0, see
+    // https://github.com/JetBrains/compose-multiplatform/issues/4502). A brand-new note has no
+    // formats yet, so it was hitting this on every fresh note. Skip the transformation entirely
+    // when there is nothing to render, so Paste keeps working until the user actually bolds/
+    // italicises/underlines something in this note.
+    val transformation = if (editorState.formats.isEmpty()) {
+        VisualTransformation.None
+    } else {
+        VisualTransformation { text ->
+            TransformedText(
+                buildAnnotatedString {
+                    append(text)
+                    editorState.formats.forEach { format ->
+                        addStyle(
+                            SpanStyle(
+                                fontWeight = if (format.isBold) FontWeight.Bold else null,
+                                fontStyle = if (format.isItalic) FontStyle.Italic else null,
+                                textDecoration = if (format.isUnderline)
+                                    TextDecoration.Underline else null,
+                                fontSize = format.textSize?.sp ?: TextUnit.Unspecified
+                            ),
+                            format.range.first.coerceIn(0, text.length),
+                            format.range.last.coerceIn(0, text.length)
+                        )
+                    }
+                },
+                OffsetMapping.Identity
+            )
+        }
     }
 
     BasicTextField(

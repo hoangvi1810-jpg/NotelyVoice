@@ -26,7 +26,6 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 const val DEFAULT_TITLE = "New Note"
-const val DEFAULT_CONTENT = "No additional text"
 const val CONTENT_LENGTH = 36
 private const val SEARCH_DEBOUNCE = 300L
 
@@ -101,7 +100,7 @@ class NoteListViewModel(
         }
         return retrievedNote.copy(
             title = displayTitle,
-            content = preview?.truncateWithEllipsis(CONTENT_LENGTH) ?: DEFAULT_CONTENT
+            content = preview?.truncateWithEllipsis(CONTENT_LENGTH).orEmpty()
         )
     }
 

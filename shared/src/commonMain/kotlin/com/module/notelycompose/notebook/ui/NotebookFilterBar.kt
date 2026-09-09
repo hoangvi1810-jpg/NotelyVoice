@@ -4,7 +4,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -13,8 +12,6 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -42,51 +39,6 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.module.notelycompose.notebook.Notebook
 import com.module.notelycompose.notes.ui.theme.LocalCustomColors
-import com.module.notelycompose.ui.components.NotelyChip
-
-private const val ALL_NOTEBOOKS_LABEL = "Tất cả sổ"
-private const val MANAGE_LABEL = "Quản lý"
-
-/**
- * Second chip row on the note list: filters by notebook. Hidden entirely when no notebooks exist,
- * so the list screen is unchanged for anyone not using them.
- */
-@Composable
-fun NotebookFilterBar(
-    notebooks: List<Notebook>,
-    selectedNotebookId: Long?,
-    onSelect: (Long?) -> Unit,
-    onManage: () -> Unit
-) {
-    if (notebooks.isEmpty()) return
-    LazyRow(
-        modifier = Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, bottom = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        contentPadding = PaddingValues(horizontal = 4.dp)
-    ) {
-        item {
-            NotelyChip(
-                text = ALL_NOTEBOOKS_LABEL,
-                selected = selectedNotebookId == null,
-                onClick = { onSelect(null) }
-            )
-        }
-        items(notebooks) { notebook ->
-            NotelyChip(
-                text = "${notebook.name} (${notebook.noteCount})",
-                selected = notebook.id == selectedNotebookId,
-                onClick = { onSelect(notebook.id) }
-            )
-        }
-        item {
-            NotelyChip(
-                text = MANAGE_LABEL,
-                selected = false,
-                onClick = onManage
-            )
-        }
-    }
-}
 
 /** Rename or delete notebooks. Deleting keeps the notes; they just become uncategorised. */
 @Composable

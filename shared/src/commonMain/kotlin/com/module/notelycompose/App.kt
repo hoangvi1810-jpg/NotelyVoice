@@ -23,6 +23,7 @@ import com.module.notelycompose.core.composableWithHorizontalSlide
 import com.module.notelycompose.core.composableWithVerticalSlide
 import com.module.notelycompose.core.navigateSingleTop
 import com.module.notelycompose.export.ui.ExportNotesScreen
+import com.module.notelycompose.notebook.ui.NotebookNotesScreen
 import com.module.notelycompose.notes.ui.detail.NoteDetailScreen
 import com.module.notelycompose.notes.ui.list.InfoScreen
 import com.module.notelycompose.notes.ui.list.NoteListScreen
@@ -112,6 +113,9 @@ fun NoteAppRoot(platformUiState: PlatformUiState) {
                     navigateToExportNotes = {
                         navController.navigateSingleTop(Routes.ExportBatchNotes)
                     },
+                    navigateToNotebookNotes = { notebookId ->
+                        navController.navigateSingleTop(Routes.NotebookNotes(notebookId))
+                    },
                     platformUiState = platformUiState
                 )
             }
@@ -154,6 +158,16 @@ fun NoteAppRoot(platformUiState: PlatformUiState) {
                     navigateBack = { navController.popBackStack() }
                 )
             }
+            composableWithHorizontalSlide<Routes.NotebookNotes> { backStackEntry ->
+                val route: Routes.NotebookNotes = backStackEntry.toRoute()
+                NotebookNotesScreen(
+                    notebookId = route.notebookId,
+                    navigateBack = { navController.popBackStack() },
+                    navigateToNoteDetails = { noteId, notebookId ->
+                        navController.navigateSingleTop(Routes.Details(noteId, notebookId))
+                    }
+                )
+            }
         }
         navigation<Routes.DetailsGraph>(startDestination = Routes.Details::class) {
             composableWithHorizontalSlide<Routes.Details> { backStackEntry ->
@@ -170,6 +184,7 @@ fun NoteAppRoot(platformUiState: PlatformUiState) {
                     navigateToTranscription = {
                         navController.navigateSingleTop(Routes.Transcription)
                     },
+                    pendingNotebookId = route.notebookId,
                     editorViewModel = koinViewModel(viewModelStoreOwner = parentEntry),
                     onNavigateToSettingsText = {
                         navController.navigateSingleTop(Routes.NoteSettingsText)
