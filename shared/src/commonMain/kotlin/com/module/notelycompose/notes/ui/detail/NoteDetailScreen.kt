@@ -359,22 +359,32 @@ fun NoteDetailScreen(
                 onClick = { showNotebookSheet = true }
             )
 
-            NoteDetailTabRow(
-                selectedTab = selectedTab,
-                onTabSelected = { selectedTab = it }
-            )
+            // A typed note that has never been recorded and never had AI content generated has
+            // nothing for the AI Note/Highlights/Summary tabs to show -- rendering them anyway is
+            // exactly the "note lands you in the audio/AI workflow" confusion this was meant to
+            // avoid. Recomputed every recomposition (not decided once), so it self-corrects the
+            // moment a recording is attached or AI content is generated, no load-order race to
+            // get wrong.
+            val hasAiContext = editorState.recording.isRecordingExist || aiUiState.hasGenerated
 
-            if (selectedTab != NoteDetailTab.TRANSCRIPT) {
-                NoteDetailTemplateBar(
-                    template = aiUiState.template,
-                    onOpenTemplatePicker = { showTemplateSheet = true },
-                    onRegenerate = { noteAiViewModel.regenerate(editorState.content.text) },
-                    isLoading = aiUiState.isLoading
+            if (hasAiContext) {
+                NoteDetailTabRow(
+                    selectedTab = selectedTab,
+                    onTabSelected = { selectedTab = it }
                 )
+
+                if (selectedTab != NoteDetailTab.TRANSCRIPT) {
+                    NoteDetailTemplateBar(
+                        template = aiUiState.template,
+                        onOpenTemplatePicker = { showTemplateSheet = true },
+                        onRegenerate = { noteAiViewModel.regenerate(editorState.content.text) },
+                        isLoading = aiUiState.isLoading
+                    )
+                }
             }
 
-            when (selectedTab) {
-                NoteDetailTab.TRANSCRIPT -> {
+            when {
+                !hasAiContext || selectedTab == NoteDetailTab.TRANSCRIPT -> {
                     NoteContent(
                         modifier = Modifier.weight(1f),
                         paddingValues = PaddingValues(0.dp),
