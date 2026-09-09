@@ -1,0 +1,35 @@
+-- Files attached to a note: images, videos, PDFs. Shown as a strip of cards under the note body.
+--
+-- `path` is an absolute path into app storage, matching how notesEntity.recording_path already
+-- works — the picked file is copied in on attach, so the note keeps working after the original is
+-- moved or deleted. Cleanup on note deletion is explicit (see DeleteNoteById); there is no
+-- FOREIGN KEY because SQLite foreign_keys enforcement is off in this project's drivers.
+CREATE TABLE attachmentEntity(
+    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    note_id INTEGER NOT NULL,
+    path TEXT NOT NULL,
+    kind TEXT NOT NULL,
+    display_name TEXT NOT NULL,
+    created_at INTEGER NOT NULL
+);
+
+CREATE INDEX attachmentEntity_note_id ON attachmentEntity(note_id);
+
+getAttachmentsForNote:
+SELECT * FROM attachmentEntity WHERE note_id = :note_id ORDER BY created_at ASC;
+
+getAttachmentPathsForNote:
+SELECT path FROM attachmentEntity WHERE note_id = :note_id;
+
+insertAttachment:
+INSERT INTO attachmentEntity(note_id, path, kind, display_name, created_at)
+VALUES(:note_id, :path, :kind, :display_name, :created_at);
+
+deleteAttachment:
+DELETE FROM attachmentEntity WHERE id = :id;
+
+getAttachmentById:
+SELECT * FROM attachmentEntity WHERE id = :id;
+
+deleteAttachmentsForNote:
+DELETE FROM attachmentEntity WHERE note_id = :note_id;

@@ -1,6 +1,7 @@
 package com.module.notelycompose.notes.domain
 
 import com.module.notelycompose.ai.AiContentDataSource
+import com.module.notelycompose.attachment.AttachmentRepository
 import com.module.notelycompose.notebook.NotebookRepository
 
 /**
@@ -13,11 +14,13 @@ import com.module.notelycompose.notebook.NotebookRepository
 class DeleteNoteById(
     private val noteDataSource: NoteDataSource,
     private val aiContentDataSource: AiContentDataSource,
-    private val notebookRepository: NotebookRepository
+    private val notebookRepository: NotebookRepository,
+    private val attachmentRepository: AttachmentRepository
 ) {
     suspend fun execute(id: Long) {
         aiContentDataSource.deleteByNoteId(id)
         notebookRepository.removeNote(id)
+        attachmentRepository.removeAllForNote(id)
         return noteDataSource.deleteNoteById(id)
     }
 }

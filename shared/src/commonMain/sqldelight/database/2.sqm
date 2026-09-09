@@ -1,0 +1,13 @@
+-- Migration 2 -> 3: note attachments (images, videos, PDFs). See 1.sqm for why every schema
+-- change needs one of these files.
+
+CREATE TABLE IF NOT EXISTS attachmentEntity(
+    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    note_id INTEGER NOT NULL,
+    path TEXT NOT NULL,
+    kind TEXT NOT NULL,
+    display_name TEXT NOT NULL,
+    created_at INTEGER NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS attachmentEntity_note_id ON attachmentEntity(note_id);

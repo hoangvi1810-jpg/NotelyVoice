@@ -59,6 +59,7 @@ androidx-compose-ui-preview = { module = "androidx.compose.ui:ui-tooling-preview
 androidx-compose-documentfile = { module = "androidx.documentfile:documentfile", version.ref = "documentfile" }
 compose-vectorize-core = { module = "dev.sergiobelda.compose.vectorize:compose-vectorize-core", version.ref = "composeVectorizeCore" }
 material-icons-core = { module = "org.jetbrains.compose.material:material-icons-core", version.ref = "materialIconsCore" }
+material-icons-extended = { module = "org.jetbrains.compose.material:material-icons-extended", version.ref = "materialIconsCore" }
 navigation-compose = { module = "org.jetbrains.androidx.navigation:navigation-compose", version.ref = "navigation-compose" }
 
 # DataStore

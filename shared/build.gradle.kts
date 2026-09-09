@@ -67,6 +67,9 @@ kotlin {
             implementation(compose.material)
             implementation(compose.material3)
             implementation(libs.material.icons.core)
+            // Only for the handful of icons attachments need (Image/PDF/description) that
+            // material-icons-core doesn't ship — core is a curated subset, not the full set.
+            implementation(libs.material.icons.extended)
             implementation(compose.components.resources)
 
             implementation(compose.components.resources)

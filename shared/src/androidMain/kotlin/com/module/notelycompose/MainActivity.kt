@@ -16,16 +16,19 @@ import com.module.notelycompose.onboarding.data.PreferencesRepository
 import com.module.notelycompose.platform.Theme
 import android.net.Uri
 import androidx.activity.result.contract.ActivityResultContracts
+import com.module.notelycompose.attachment.AttachmentLauncherHolder
 
 class MainActivity : AppCompatActivity() {
     private val fileSaverLauncherHolder by inject<FileSaverLauncherHolder>()
     private val folderPickerLauncherHolder by inject<FolderPickerLauncherHolder>()
+    private val attachmentLauncherHolder by inject<AttachmentLauncherHolder>()
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
         super.onCreate(savedInstanceState)
         injectLauncher()
         setupFileSaverLauncher()
         setupFolderPickerLauncher()
+        setupAttachmentPickerLaunchers()
         enableEdgeToEdge()
         setContent {
             val systemUiController = rememberSystemUiController()
@@ -71,5 +74,16 @@ class MainActivity : AppCompatActivity() {
     private fun injectLauncher() {
         val launcherHolder by inject<LauncherHolder>()
         launcherHolder.init(this)
+    }
+
+    private fun setupAttachmentPickerLaunchers() {
+        attachmentLauncherHolder.mediaPickerLauncher =
+            registerForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri: Uri? ->
+                attachmentLauncherHolder.onPicked?.invoke(uri)
+            }
+        attachmentLauncherHolder.documentPickerLauncher =
+            registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
+                attachmentLauncherHolder.onPicked?.invoke(uri)
+            }
     }
 }

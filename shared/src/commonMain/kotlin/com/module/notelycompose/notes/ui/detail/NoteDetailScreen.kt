@@ -75,6 +75,10 @@ import com.module.notelycompose.modelDownloader.ModelDownloaderViewModel
 import com.module.notelycompose.audio.presentation.AudioImportViewModel
 import com.module.notelycompose.audio.ui.importing.ImportingAudioStateHost
 import com.module.notelycompose.modelDownloader.ModelSelection
+import com.module.notelycompose.attachment.AttachmentViewModel
+import com.module.notelycompose.attachment.ui.AddAttachmentButton
+import com.module.notelycompose.attachment.ui.AttachmentPickerMenu
+import com.module.notelycompose.attachment.ui.AttachmentStrip
 import com.module.notelycompose.notebook.NotebookViewModel
 import com.module.notelycompose.notebook.ui.NotebookPickerSheet
 import com.module.notelycompose.notebook.ui.NotebookRow
@@ -117,7 +121,8 @@ fun NoteDetailScreen(
     editorViewModel: TextEditorViewModel,
     modelSelection: ModelSelection = koinInject(),
     noteAiViewModel: NoteAiViewModel = koinViewModel(),
-    notebookViewModel: NotebookViewModel = koinViewModel()
+    notebookViewModel: NotebookViewModel = koinViewModel(),
+    attachmentViewModel: AttachmentViewModel = koinViewModel()
 ) {
     val currentNoteId by editorViewModel.currentNoteId.collectAsStateWithLifecycle()
     val importingState by audioImportViewModel.importingAudioState.collectAsStateWithLifecycle()
@@ -156,6 +161,12 @@ fun NoteDetailScreen(
     val aiUiState by noteAiViewModel.uiState.collectAsStateWithLifecycle()
     val notebookState by notebookViewModel.state.collectAsStateWithLifecycle()
     val currentNotebookId = currentNoteId?.let { notebookState.assignments[it] }
+    val attachments by attachmentViewModel.attachments.collectAsStateWithLifecycle()
+    var showAttachmentMenu by remember { mutableStateOf(false) }
+
+    LaunchedEffect(currentNoteId) {
+        currentNoteId?.takeIf { it != 0L }?.let { attachmentViewModel.setNoteId(it) }
+    }
 
     // What the copy/share actions act on: whatever the user is actually looking at. Previously
     // both always used the raw transcript, so the AI tabs could not be copied or shared at all.
@@ -377,7 +388,11 @@ fun NoteDetailScreen(
                         onFocusChange = {
                             isTextFieldFocused = it
                         },
-                        onFabVisibility = { isFabVisible = it }
+                        onFabVisibility = { isFabVisible = it },
+                        attachments = attachments,
+                        onAddAttachmentClick = { showAttachmentMenu = true },
+                        onRemoveAttachment = attachmentViewModel::remove,
+                        onOpenAttachment = attachmentViewModel::open
                     )
                 }
 
@@ -392,6 +407,15 @@ fun NoteDetailScreen(
                 }
             }
         }
+    }
+
+    if (showAttachmentMenu) {
+        AttachmentPickerMenu(
+            onDismiss = { showAttachmentMenu = false },
+            onPickImage = attachmentViewModel::pickImage,
+            onPickVideo = attachmentViewModel::pickVideo,
+            onPickDocument = attachmentViewModel::pickDocument
+        )
     }
 
     if (showNotebookSheet) {
@@ -522,7 +546,11 @@ private fun NoteContent(
     audioPlayerUiState: AudioPlayerUiState,
     textEditorViewModel: TextEditorViewModel,
     audioPlayerViewModel: AudioPlayerViewModel,
-    onFabVisibility: (Boolean) -> Unit
+    onFabVisibility: (Boolean) -> Unit,
+    attachments: List<com.module.notelycompose.attachment.Attachment>,
+    onAddAttachmentClick: () -> Unit,
+    onRemoveAttachment: (Long) -> Unit,
+    onOpenAttachment: (com.module.notelycompose.attachment.Attachment) -> Unit
 ) {
     val coroutineScope = rememberCoroutineScope()
     var showDeleteRecordingDialog by remember { mutableStateOf(false) }
@@ -607,6 +635,22 @@ private fun NoteContent(
                 textEditorViewModel = textEditorViewModel,
                 onFabVisibility = onFabVisibility
             )
+
+            if (attachments.isEmpty()) {
+                // AttachmentStrip hides itself entirely when empty (so notes without attachments
+                // render exactly as before this feature existed) -- this is the one always-visible
+                // entry point to add the first one.
+                Box(modifier = Modifier.padding(start = 20.dp, bottom = 8.dp)) {
+                    AddAttachmentButton(onClick = onAddAttachmentClick)
+                }
+            } else {
+                AttachmentStrip(
+                    attachments = attachments,
+                    onAddClick = onAddAttachmentClick,
+                    onRemove = onRemoveAttachment,
+                    onOpen = onOpenAttachment
+                )
+            }
         }
     }
     DeleteRecordingConfirmationDialog(

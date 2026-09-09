@@ -9,4 +9,10 @@
     <cache-path
         name="internal_recordings"
         path="." />
+
+    <!-- AttachmentPicker.android.kt copies picked images/videos/PDFs into filesDir/attachments;
+         without this entry FileProvider.getUriForFile throws for anything under that directory. -->
+    <files-path
+        name="attachments"
+        path="attachments/" />
 </paths>

@@ -1,6 +1,8 @@
 package com.module.notelycompose.di
 
 
+import com.module.notelycompose.attachment.AttachmentOpener
+import com.module.notelycompose.attachment.AttachmentPicker
 import com.module.notelycompose.audio.domain.AudioRecorderInteractor
 import com.module.notelycompose.audio.domain.AudioRecorderInteractorImpl
 import com.module.notelycompose.database.NoteDatabase
@@ -30,6 +32,8 @@ actual val platformModule = module {
     single { BrowserLauncher() }
     single { dataStore() }
     single { IOSPdfGenerator() }
+    single { AttachmentPicker() }
+    single { AttachmentOpener() }
 
     single<SqlDriver> {
         NativeSqliteDriver(NoteDatabase.Schema, "notes.db")

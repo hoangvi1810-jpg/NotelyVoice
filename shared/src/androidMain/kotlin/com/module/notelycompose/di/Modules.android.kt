@@ -5,6 +5,9 @@ import com.module.notelycompose.FileSaverHandler
 import com.module.notelycompose.FileSaverLauncherHolder
 import com.module.notelycompose.FolderPickerHandler
 import com.module.notelycompose.FolderPickerLauncherHolder
+import com.module.notelycompose.attachment.AttachmentLauncherHolder
+import com.module.notelycompose.attachment.AttachmentOpener
+import com.module.notelycompose.attachment.AttachmentPicker
 import com.module.notelycompose.audio.domain.AudioRecorderInteractor
 import com.module.notelycompose.audio.domain.AudioRecorderInteractorImpl
 import com.module.notelycompose.audio.domain.SaveAudioNoteInteractor
@@ -40,6 +43,9 @@ actual val platformModule = module {
     }
     single { FileSaverLauncherHolder() }
     single { FileSaverHandler(get()) }
+    single { AttachmentLauncherHolder() }
+    single { AttachmentPicker(get(), get()) }
+    single { AttachmentOpener(get()) }
     single<Platform> { AndroidPlatform(get(named("AppVersion")), get()) }
     single { dataStore(get()) }
     single { PlatformUtils(get(), get(), get()) }
