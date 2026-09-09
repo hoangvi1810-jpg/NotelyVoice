@@ -8,6 +8,7 @@ import com.module.notelycompose.FolderPickerLauncherHolder
 import com.module.notelycompose.attachment.AttachmentLauncherHolder
 import com.module.notelycompose.attachment.AttachmentOpener
 import com.module.notelycompose.attachment.AttachmentPicker
+import com.module.notelycompose.attachment.ClipboardImageReader
 import com.module.notelycompose.audio.domain.AudioRecorderInteractor
 import com.module.notelycompose.audio.domain.AudioRecorderInteractorImpl
 import com.module.notelycompose.audio.domain.SaveAudioNoteInteractor
@@ -46,6 +47,7 @@ actual val platformModule = module {
     single { AttachmentLauncherHolder() }
     single { AttachmentPicker(get(), get()) }
     single { AttachmentOpener(get()) }
+    single { ClipboardImageReader(get()) }
     single<Platform> { AndroidPlatform(get(named("AppVersion")), get()) }
     single { dataStore(get()) }
     single { PlatformUtils(get(), get(), get()) }

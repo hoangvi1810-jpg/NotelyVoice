@@ -154,15 +154,20 @@ fun NoteListScreen(
                         viewModel.onProcessIntent(NoteListIntent.OnSearchNote(keyword))
                     }
                 )
+                // Home is voice-recording-only: typed notes live in their notebook screen instead
+                // (NotebookNotesScreen), never mixed into this list -- the count shown here and
+                // the empty-state check both need to agree with that, not with the view model's
+                // shared (voice + typed) state, which NotebookNotesScreen also reads from.
+                val voiceNotes = viewModel.onGetUiState(notesListState).filter { it.isVoice }
                 FilterTabBar(
                     selectedTabIndex = notesListState.selectedTabIndex,
                     onFilterTabItemClicked = { titleIndex ->
                         viewModel.onProcessIntent(NoteListIntent.OnFilterNote(titleIndex))
                     },
-                    allSizeStr = notesListState.allNotesSizeStr
+                    allSizeStr = if (voiceNotes.isEmpty()) "" else "(${voiceNotes.size})"
                 )
                 NoteList(
-                    noteList = viewModel.onGetUiState(notesListState),
+                    noteList = voiceNotes,
                     onNoteClicked = { id ->
                         navigateToNoteDetails("$id")
                     },
@@ -178,7 +183,7 @@ fun NoteListScreen(
                         exportViewModel.onUpdateNoteIds(selectionIds)
                     }
                 )
-                if(notesListState.showEmptyContent) EmptyNoteUi(platformUiState.isTablet)
+                if (voiceNotes.isEmpty()) EmptyNoteUi(platformUiState.isTablet)
             }
         }
     }

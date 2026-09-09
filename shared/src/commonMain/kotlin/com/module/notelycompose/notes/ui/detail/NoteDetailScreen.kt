@@ -77,6 +77,7 @@ import com.module.notelycompose.audio.ui.importing.ImportingAudioStateHost
 import com.module.notelycompose.modelDownloader.ModelSelection
 import com.module.notelycompose.attachment.AttachmentViewModel
 import com.module.notelycompose.attachment.ui.AddAttachmentButton
+import com.module.notelycompose.attachment.ui.PasteImageButton
 import com.module.notelycompose.attachment.ui.AttachmentPickerMenu
 import com.module.notelycompose.attachment.ui.AttachmentStrip
 import com.module.notelycompose.notebook.NotebookViewModel
@@ -441,7 +442,14 @@ fun NoteDetailScreen(
                             }
                         },
                         onRemoveAttachment = attachmentViewModel::remove,
-                        onOpenAttachment = attachmentViewModel::open
+                        onOpenAttachment = attachmentViewModel::open,
+                        onPasteImageClick = {
+                            screenScope.launch {
+                                val id = editorViewModel.ensureNoteSaved()
+                                attachmentViewModel.setNoteId(id)
+                                attachmentViewModel.pasteImageFromClipboard()
+                            }
+                        }
                     )
                 }
 
@@ -600,7 +608,8 @@ private fun NoteContent(
     attachments: List<com.module.notelycompose.attachment.Attachment>,
     onAddAttachmentClick: () -> Unit,
     onRemoveAttachment: (Long) -> Unit,
-    onOpenAttachment: (com.module.notelycompose.attachment.Attachment) -> Unit
+    onOpenAttachment: (com.module.notelycompose.attachment.Attachment) -> Unit,
+    onPasteImageClick: () -> Unit
 ) {
     val coroutineScope = rememberCoroutineScope()
     var showDeleteRecordingDialog by remember { mutableStateOf(false) }
@@ -687,14 +696,23 @@ private fun NoteContent(
             )
 
             if (showAttachments) {
-                if (attachments.isEmpty()) {
+                Row(
+                    modifier = Modifier.padding(start = 20.dp, bottom = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    // "Dán ảnh" reads the clipboard directly -- copy a photo elsewhere, tap this,
+                    // it shows up immediately, no file-picker menu. Always offered alongside the
+                    // picker-based "Đính kèm", not a replacement for it (PDFs/videos still need
+                    // the picker).
+                    PasteImageButton(onClick = onPasteImageClick)
                     // AttachmentStrip hides itself entirely when empty (so notes without
                     // attachments render exactly as before this feature existed) -- this is the
                     // one always-visible entry point to add the first one.
-                    Box(modifier = Modifier.padding(start = 20.dp, bottom = 8.dp)) {
+                    if (attachments.isEmpty()) {
                         AddAttachmentButton(onClick = onAddAttachmentClick)
                     }
-                } else {
+                }
+                if (attachments.isNotEmpty()) {
                     AttachmentStrip(
                         attachments = attachments,
                         onAddClick = onAddAttachmentClick,

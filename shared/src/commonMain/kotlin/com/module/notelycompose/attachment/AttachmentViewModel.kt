@@ -16,7 +16,8 @@ import kotlinx.coroutines.withContext
 class AttachmentViewModel(
     private val repository: AttachmentRepository,
     private val picker: AttachmentPicker,
-    private val opener: AttachmentOpener
+    private val opener: AttachmentOpener,
+    private val clipboardImageReader: ClipboardImageReader
 ) : ViewModel() {
 
     private val noteId = MutableStateFlow<Long?>(null)
@@ -42,6 +43,21 @@ class AttachmentViewModel(
                 }
             }
         }
+    }
+
+    /**
+     * Pastes whatever image is currently on the system clipboard straight into the note, the way
+     * pasting into Word drops the image in immediately -- no file-picker menu. Returns false when
+     * the clipboard has no image right now, so the caller can tell the user there was nothing to
+     * paste.
+     */
+    fun pasteImageFromClipboard(): Boolean {
+        val id = noteId.value ?: return false
+        val file = clipboardImageReader.read() ?: return false
+        viewModelScope.launch {
+            withContext(Dispatchers.Default) { repository.add(id, file) }
+        }
+        return true
     }
 
     fun remove(attachmentId: Long) {

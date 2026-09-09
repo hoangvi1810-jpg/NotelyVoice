@@ -23,6 +23,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.PlayArrow
@@ -79,6 +80,37 @@ fun AttachmentStrip(
         item {
             AddAttachmentCard(onClick = onAddClick)
         }
+    }
+}
+
+/**
+ * "Dán ảnh" -- reads whatever image is currently on the system clipboard and attaches it right
+ * away, no file-picker menu. This is the paste-like shortcut next to [AddAttachmentButton]: copy
+ * a photo elsewhere, tap this, done -- the way pasting into Word drops an image in immediately.
+ */
+@Composable
+fun PasteImageButton(onClick: () -> Unit) {
+    val colors = LocalCustomColors.current
+    Row(
+        modifier = Modifier
+            .clip(RoundedCornerShape(20.dp))
+            .background(colors.accentSoft)
+            .clickable { onClick() }
+            .padding(horizontal = 14.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = Icons.Default.ContentPaste,
+            contentDescription = null,
+            tint = colors.accent,
+            modifier = Modifier.size(16.dp)
+        )
+        Spacer(modifier = Modifier.width(6.dp))
+        Text(
+            text = "Dán ảnh",
+            style = MaterialTheme.typography.labelLarge,
+            color = colors.accent
+        )
     }
 }
 
