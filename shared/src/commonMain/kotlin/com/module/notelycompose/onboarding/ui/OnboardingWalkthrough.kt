@@ -23,7 +23,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.module.notelycompose.platform.getPlatform
 import com.module.notelycompose.notes.ui.theme.LocalCustomColors
-import com.module.notelycompose.notes.ui.theme.PoppingsFontFamily
+import com.module.notelycompose.notes.ui.theme.BeVietnamProFontFamily
 import com.module.notelycompose.platform.presentation.PlatformUiState
 import com.module.notelycompose.platform.presentation.PlatformViewModel
 import kotlinx.coroutines.launch
@@ -267,7 +267,7 @@ fun VoiceNotePageContent(
         text = page.title,
         fontSize = 32.sp,
         fontWeight = FontWeight.Bold,
-        fontFamily = PoppingsFontFamily(),
+        fontFamily = BeVietnamProFontFamily(),
         color = page.textColor,
         textAlign = TextAlign.Start,
         modifier = Modifier

@@ -65,16 +65,17 @@ fun MyApplicationTheme(
     val customColors = if (darkTheme) DarkCustomColors else LightCustomColors
     val m3ColorScheme = if (darkTheme) DarkAppColorScheme else LightAppColorScheme
     val m2Colors = if (darkTheme) DarkColorPaletteM2 else LightColorPaletteM2
-    val poppins = PoppingsFontFamily()
+    val font = BeVietnamProFontFamily()
     val typography = appTypography()
 
     // Legacy M2 typography slots, covering the handful of remaining `MaterialTheme.typography.*`
-    // (M2) call sites so they read Poppins + the purple palette too, ahead of their own migration.
+    // (M2) call sites so they read the app typeface + the purple palette too, ahead of their own
+    // migration.
     val legacyTypography = Typography2(
-        h6 = TextStyle(fontFamily = poppins, fontWeight = FontWeight.SemiBold, fontSize = 20.sp, lineHeight = 26.sp),
-        body1 = TextStyle(fontFamily = poppins, fontWeight = FontWeight.Normal, fontSize = 16.sp, lineHeight = 24.sp),
-        body2 = TextStyle(fontFamily = poppins, fontWeight = FontWeight.Normal, fontSize = 14.sp, lineHeight = 20.sp),
-        caption = TextStyle(fontFamily = poppins, fontWeight = FontWeight.Normal, fontSize = 13.sp, lineHeight = 18.sp)
+        h6 = TextStyle(fontFamily = font, fontWeight = FontWeight.SemiBold, fontSize = 20.sp, lineHeight = 26.sp),
+        body1 = TextStyle(fontFamily = font, fontWeight = FontWeight.Normal, fontSize = 16.sp, lineHeight = 24.sp),
+        body2 = TextStyle(fontFamily = font, fontWeight = FontWeight.Normal, fontSize = 14.sp, lineHeight = 20.sp),
+        caption = TextStyle(fontFamily = font, fontWeight = FontWeight.Normal, fontSize = 13.sp, lineHeight = 18.sp)
     )
 
     CompositionLocalProvider(

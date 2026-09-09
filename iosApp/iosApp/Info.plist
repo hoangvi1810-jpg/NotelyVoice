@@ -24,10 +24,8 @@
 	<true/>
 	<key>LSSupportsOpeningDocumentsInPlace</key>
 	<true/>
-    <key>UISupportsDocumentBrowser</key>
-    <true/>
-    <key>LSSupportsOpeningDocumentsInPlace</key>
-    <true/>
+	<key>UISupportsDocumentBrowser</key>
+	<true/>
 	<key>MinimumOSVersion</key>
 	<string>16.4</string>
 	<key>NSAppTransportSecurity</key>
@@ -46,8 +44,6 @@
 	</dict>
 	<key>UIFileSharingEnabled</key>
 	<true/>
-	<key>UILaunchScreen</key>
-	<dict/>
 	<key>UILaunchStoryboardName</key>
 	<string>SplashScreen.storyboard</string>
 	<key>UIRequiredDeviceCapabilities</key>
