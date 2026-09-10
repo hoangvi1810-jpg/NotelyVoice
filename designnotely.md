@@ -74,6 +74,11 @@ Cơ chế đã cài (thay thế hoàn toàn nút "Dán ảnh" cũ): `NotebookRic
 - Fingerprint mới → đọc + copy ảnh thật (`ClipboardImageReader.read()`), gắn vào note.
 - Không có ảnh trong clipboard → im lặng không làm gì (vẫn chưa có snackbar báo lỗi khi cần — biết là thiếu).
 
+### Cập nhật: thêm lại nút "Dán" thủ công (thay cho chỉ auto-paste-on-focus)
+Auto-paste-on-focus (mục trên) không đủ tin cậy trong thực tế test: nếu ô văn bản đã đang focus sẵn (bàn phím đang mở) khi user copy ảnh mới ở nơi khác, không có sự kiện focus-change nào để kích hoạt kiểm tra clipboard. Ngoài ra phát hiện `richeditor-compose` (bản rc13, chưa ra 1.0 chính thức) **không hỗ trợ gesture long-press chọn/copy/dán văn bản chuẩn của Android/iOS** — long-press vào chữ không hiện bong bóng Copy/Paste nào cả.
+
+→ Thêm lại nút **"Dán"** (icon clipboard, luôn hiện phía trên ô văn bản note tay) xử lý cả 2 trong 1 lần bấm: đọc clipboard text (nếu có, ghép vào cuối nội dung hiện tại — **không chèn đúng vị trí con trỏ**, giới hạn đã chấp nhận) và đọc clipboard ảnh (nếu có, đính kèm). Đây là fallback chắc chắn hoạt động, không phụ thuộc gesture của thư viện rich-text.
+
 **Vì sao không chèn ảnh thật vào giữa đoạn văn (đúng vị trí con trỏ) như Word?** Đã cân nhắc `Modifier.receiveContent` (Compose Foundation) và API insert-ảnh-inline của `richeditor-compose`, nhưng cả hai đều là API mới/chưa xác nhận hoạt động ổn định trên iOS target của CMP 1.8.2, và **không thể verify tại chỗ** (không có Mac). Chọn phương án "ảnh luôn xếp dưới văn bản" vì chắc chắn hoạt động (đã build+test qua CI thành công), không đánh cược thêm 1 vòng build-fail. Nếu sau này muốn nâng cấp lên chèn ảnh đúng vị trí con trỏ — phải test được trên thiết bị iOS thật trước khi commit vào luồng chính.
 
 ### Hiển thị ảnh: to, xếp dọc dưới văn bản (đã triển khai xong, không còn là "chưa làm")

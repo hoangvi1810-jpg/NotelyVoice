@@ -83,6 +83,28 @@ Ban đầu đoán `UIPasteboard.generalPasteboard.changeCount` cũng là categor
 
 **Rút ra**: quy tắc mục 2 (đoán trước = thêm import phòng ngừa) chỉ nên áp dụng khi **tương đối chắc** đây là category (tên dạng `xWithY:`, `writeToZ:`, hoặc đã thấy đúng pattern này ở hàm khác cùng class). Với 1 property đơn giản như `changeCount`, cứ dùng thẳng trước, chỉ thêm import khi build thật báo lỗi — rẻ hơn là đoán sai và tự tạo ra lỗi mới.
 
+### Bẫy nghiêm trọng nhất phiên này: `isNotebookNote` chớp tắt `false` làm mất nội dung đang gõ/dán
+
+Test dán chữ qua nút "Dán" liên tục thất bại (chữ vào state đúng nhưng không hiện, hoặc hiện rồi biến mất ngay) — mất **hàng chục lượt build+test** mới lần ra nguyên nhân thật, không nằm ở `richeditor-compose` mà ở chính `NoteDetailScreen.kt`.
+
+**Nguyên nhân**: `isNotebookNote = pendingNotebook != null || currentNotebookId != null` (dòng ~178). Ngay sau khi note gõ tay mới tạo được lưu lần đầu (`ensureNoteSaved()`), effect dọn `pendingNotebook = null` **trước khi** `notebookViewModel.assign(id, it)` (ghi DB + đọc lại qua Flow, bất đồng bộ) kịp cập nhật `currentNotebookId`. Trong khoảng hở đó — dù chỉ 1-2 lần recomposition — **cả hai điều kiện đều `null`**, `isNotebookNote` đọc ra `false`. `NoteDetailScreen` liền đổi nhánh `if (isNotebookNote) NotebookRichEditor(...) else NoteEditor(...)`, tức là **tháo hẳn `NotebookRichEditor` ra khỏi cây composition rồi gắn `NoteEditor` (ghi âm) vào, rồi đổi lại gần như ngay sau đó** — toàn bộ state `remember`ed bên trong `NotebookRichEditor` (bao gồm nội dung vừa gõ/dán) bị Compose dispose sạch khi tháo ra, dù mắt thường không kịp thấy `NoteEditor` xuất hiện.
+
+Đây cũng chính là nguyên nhân của hiện tượng phụ đã thấy nhiều lần: note mới tạo thoáng hiện badge "Chưa phân loại" thay vì đúng tên sổ, rồi mới nhảy về đúng — cùng một khoảng hở.
+
+**Đã fix**: thêm cờ chốt `everNotebookNote` (`remember { mutableStateOf(false) }`), một khi `isNotebookNote` từng đọc `true` thì chốt luôn `true` cho hết vòng đời màn hình đó:
+```kotlin
+var everNotebookNote by remember { mutableStateOf(false) }
+val isNotebookNote = pendingNotebook != null || currentNotebookId != null || everNotebookNote
+if (isNotebookNote) everNotebookNote = true
+```
+**Quy tắc rút ra**: bất kỳ điều kiện nào quyết định **đổi nhánh cấu trúc composition** (loại bỏ hẳn 1 subtree, không chỉ ẩn/hiện) mà phụ thuộc vào nhiều nguồn dữ liệu bất đồng bộ độc lập (ở đây: state cục bộ `pendingNotebook` + Flow từ DB `currentNotebookId`) — phải chốt (latch) một khi đã đúng, không được đọc lại "sống" mỗi lần recomposition. Nếu chỉ ẩn/hiện UI (không đổi nhánh `if/else` giữa 2 composable khác nhau), việc đọc lại mỗi lần là an toàn — vấn đề chỉ nổ ra khi đổi nhánh làm mất hẳn state đã `remember`.
+
+### `RichTextState.setHtml()` chỉ đáng tin khi gọi lúc mount, không phải lúc đang chạy
+
+Gọi `state.setHtml(...)` sau khi `RichTextEditor` đã mount (ví dụ từ callback của nút "Dán") **có cập nhật `state.annotatedString`/`state.toHtml()` đúng** (xác nhận qua log) nhưng **UI không vẽ lại** — trông như không có gì xảy ra. Chỉ gọi lúc `LaunchedEffect(initialHtml)` chạy lần đầu (đúng lúc composable mount) mới chắc chắn hiển thị đúng.
+
+**Cách né**: `NotebookRichEditor` bọc phần thân trong `key(remountKey) { EditorContent(initialHtml = pendingHtml, ...) }` — khi cần "dán" nội dung mới vào giữa chừng, set `pendingHtml` rồi tăng `remountKey` để Compose **huỷ hẳn state cũ, tạo state mới**, đi lại đúng con đường "hydrate lúc mount" đã biết là đáng tin, thay vì cố sửa state đang sống.
+
 ---
 
 ## 5. Quy trình build & test bắt buộc trước khi push iOS
