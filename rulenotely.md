@@ -78,8 +78,10 @@ User yêu cầu rõ: không cần nút, chạm vào ô văn bản là ảnh tron
 - Chống dán lặp: `ClipboardImageReader.fingerprint()` (method mới trên expect/actual class) — Android trả URI string, iOS trả `UIPasteboard.generalPasteboard.changeCount.toString()`. So với fingerprint lần dán tự động gần nhất, trùng thì bỏ qua.
 - `AttachmentStrip` viết lại: ảnh full-width xếp dọc (không còn thẻ nhỏ nằm ngang + nút "+"), chỉ hiện `AttachmentKind.IMAGE` (video/PDF không còn đường vào từ note gõ tay vì picker đã xoá).
 
-### Lưu ý cinterop mới trong phiên này
-`UIPasteboard.generalPasteboard.changeCount` — theo đúng quy tắc mục 2, đã chủ động thêm `import platform.UIKit.changeCount` trước khi build (category member), build CI qua thành công lần đầu.
+### Lưu ý cinterop mới trong phiên này — 1 lần đoán sai theo đúng quy tắc mục 2
+Ban đầu đoán `UIPasteboard.generalPasteboard.changeCount` cũng là category member như `image`, chủ động thêm `import platform.UIKit.changeCount` — build CI fail: `error: Unresolved reference 'changeCount'` **trỏ thẳng vào chính dòng import đó**. Hoá ra `changeCount` là property bình thường khai trong `@interface UIPasteboard` chính (không phải category) — dùng thẳng `UIPasteboard.generalPasteboard.changeCount` không cần import gì cả; **thêm 1 import cho symbol không tồn tại tự nó là lỗi biên dịch**, không phải no-op vô hại như tưởng.
+
+**Rút ra**: quy tắc mục 2 (đoán trước = thêm import phòng ngừa) chỉ nên áp dụng khi **tương đối chắc** đây là category (tên dạng `xWithY:`, `writeToZ:`, hoặc đã thấy đúng pattern này ở hàm khác cùng class). Với 1 property đơn giản như `changeCount`, cứ dùng thẳng trước, chỉ thêm import khi build thật báo lỗi — rẻ hơn là đoán sai và tự tạo ra lỗi mới.
 
 ---
 

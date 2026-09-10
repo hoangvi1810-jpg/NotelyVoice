@@ -10,7 +10,6 @@ import platform.Foundation.timeIntervalSince1970
 import platform.Foundation.writeToURL
 import platform.UIKit.UIImagePNGRepresentation
 import platform.UIKit.UIPasteboard
-import platform.UIKit.changeCount
 import platform.UIKit.image
 
 @OptIn(ExperimentalForeignApi::class)
