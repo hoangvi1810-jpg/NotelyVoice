@@ -71,6 +71,7 @@ fun BottomNavigationBar(
     editorViewModel: TextEditorViewModel,
     navigateBack: () -> Unit,
     onNavigateToSettingsText: () -> Unit,
+    isNotebookNote: Boolean = false,
     preferencesRepository: PreferencesRepository = koinInject()
 ) {
     val colors = LocalCustomColors.current
@@ -102,9 +103,13 @@ fun BottomNavigationBar(
         modifier = Modifier
             .fillMaxWidth()
     ) {
+        // The old Title/Heading/Subheading/Body + B/I/U/align panel operates on
+        // TextEditorViewModel's range-based formatting, which NoteDetailScreen no longer uses for
+        // notebook notes (NotebookRichEditor has its own inline toolbar instead) -- showing it here
+        // too was dead weight taking up screen space with no effect on the rich editor.
         AnimatedVisibility(
             modifier = Modifier.align(Alignment.BottomCenter),
-            visible = showFormatBar,
+            visible = showFormatBar && !isNotebookNote,
             enter = fadeIn(
                 animationSpec = tween(durationMillis = 250)
             )
@@ -146,21 +151,23 @@ fun BottomNavigationBar(
             horizontalArrangement = Arrangement.SpaceAround,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            IconButton(onClick = {
-                onShowTextFormatBar(true)
-            }) {
-                Icon(
-                    imageVector = Images.Icons.IcLetterAa,
-                    contentDescription = stringResource(Res.string.bottom_navigation_letter),
-                    tint = colors.onSurfaceVariant
-                )
-            }
-            IconButton(onClick = editorViewModel::onToggleBulletList) {
-                Icon(
-                    imageVector = Images.Icons.IcDetailList,
-                    contentDescription = stringResource(Res.string.bottom_navigation_bullet_list),
-                    tint = colors.onSurfaceVariant
-                )
+            if (!isNotebookNote) {
+                IconButton(onClick = {
+                    onShowTextFormatBar(true)
+                }) {
+                    Icon(
+                        imageVector = Images.Icons.IcLetterAa,
+                        contentDescription = stringResource(Res.string.bottom_navigation_letter),
+                        tint = colors.onSurfaceVariant
+                    )
+                }
+                IconButton(onClick = editorViewModel::onToggleBulletList) {
+                    Icon(
+                        imageVector = Images.Icons.IcDetailList,
+                        contentDescription = stringResource(Res.string.bottom_navigation_bullet_list),
+                        tint = colors.onSurfaceVariant
+                    )
+                }
             }
             IconButton(onClick = editorViewModel::onToggleStar) {
                 Icon(

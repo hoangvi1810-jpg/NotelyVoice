@@ -29,6 +29,16 @@ actual class ClipboardImageReader(private val context: Context) {
         }
     }
 
+    actual fun fingerprint(): String? {
+        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
+        val clip = clipboard?.primaryClip ?: return null
+        if (clip.itemCount == 0) return null
+        val uri = clip.getItemAt(0).uri ?: return null
+        val mimeType = context.contentResolver.getType(uri) ?: return null
+        if (!mimeType.startsWith("image/")) return null
+        return uri.toString()
+    }
+
     private fun attachmentsDir(): File =
         File(context.filesDir, "attachments").apply { if (!exists()) mkdirs() }
 }

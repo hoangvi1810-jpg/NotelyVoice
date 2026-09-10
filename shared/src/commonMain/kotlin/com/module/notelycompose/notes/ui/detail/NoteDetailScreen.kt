@@ -76,9 +76,6 @@ import com.module.notelycompose.audio.presentation.AudioImportViewModel
 import com.module.notelycompose.audio.ui.importing.ImportingAudioStateHost
 import com.module.notelycompose.modelDownloader.ModelSelection
 import com.module.notelycompose.attachment.AttachmentViewModel
-import com.module.notelycompose.attachment.ui.AddAttachmentButton
-import com.module.notelycompose.attachment.ui.PasteImageButton
-import com.module.notelycompose.attachment.ui.AttachmentPickerMenu
 import com.module.notelycompose.attachment.ui.AttachmentStrip
 import com.module.notelycompose.notebook.NotebookViewModel
 import com.module.notelycompose.notebook.ui.NotebookPickerSheet
@@ -125,7 +122,8 @@ fun NoteDetailScreen(
     modelSelection: ModelSelection = koinInject(),
     noteAiViewModel: NoteAiViewModel = koinViewModel(),
     notebookViewModel: NotebookViewModel = koinViewModel(),
-    attachmentViewModel: AttachmentViewModel = koinViewModel()
+    attachmentViewModel: AttachmentViewModel = koinViewModel(),
+    richContentViewModel: com.module.notelycompose.notebook.RichContentViewModel = koinViewModel()
 ) {
     val currentNoteId by editorViewModel.currentNoteId.collectAsStateWithLifecycle()
     val importingState by audioImportViewModel.importingAudioState.collectAsStateWithLifecycle()
@@ -165,7 +163,7 @@ fun NoteDetailScreen(
     val notebookState by notebookViewModel.state.collectAsStateWithLifecycle()
     val currentNotebookId = currentNoteId?.let { notebookState.assignments[it] }
     val attachments by attachmentViewModel.attachments.collectAsStateWithLifecycle()
-    var showAttachmentMenu by remember { mutableStateOf(false) }
+    val richContentHtml by richContentViewModel.html.collectAsStateWithLifecycle()
     val screenScope = rememberCoroutineScope()
     // A brand-new note stays at id 0 until the first keystroke inserts it, so the notebook this
     // screen was opened for can't be assigned until then -- consumed exactly once, the first time
@@ -179,9 +177,17 @@ fun NoteDetailScreen(
     // notebook screens are supposed to be walled off from.
     val isNotebookNote = pendingNotebook != null || currentNotebookId != null
 
-    LaunchedEffect(currentNoteId) {
+    // Keyed on isNotebookNote too, not just currentNoteId: for an EXISTING notebook note opened
+    // directly, currentNoteId is already the real id on the very first composition, while
+    // notebookState.assignments (loaded async from DB) may still be empty -- isNotebookNote reads
+    // false for an instant, this effect fires once with that stale value, and since currentNoteId
+    // never changes again it would never re-fire once assignments load and isNotebookNote flips
+    // true. That was silently skipping richContentViewModel.load(id), leaving the rich editor blank
+    // on reopen even though the HTML was saved correctly.
+    LaunchedEffect(currentNoteId, isNotebookNote) {
         currentNoteId?.takeIf { it != 0L }?.let { id ->
             attachmentViewModel.setNoteId(id)
+            if (isNotebookNote) richContentViewModel.load(id)
             pendingNotebook?.let { notebookViewModel.assign(id, it) }
             pendingNotebook = null
         }
@@ -358,7 +364,8 @@ fun NoteDetailScreen(
                 onShowTextFormatBar = { showFormatBar = it },
                 editorViewModel = editorViewModel,
                 navigateBack = navigateBack,
-                onNavigateToSettingsText = onNavigateToSettingsText
+                onNavigateToSettingsText = onNavigateToSettingsText,
+                isNotebookNote = isNotebookNote
             )
         }
     ) { paddingValues ->
@@ -425,29 +432,37 @@ fun NoteDetailScreen(
                             isTextFieldFocused = it
                         },
                         onFabVisibility = { isFabVisible = it },
-                        // Attachments are a notebook (typed-note) feature only -- a voice note
+                        // Pasted images are a notebook (typed-note) feature only -- a voice note
                         // (Home's mic FAB, isNotebookNote == false) must never offer them, whether
                         // it's brand-new or its Transcript tab is what's currently showing here.
                         showAttachments = isNotebookNote,
                         attachments = attachments,
-                        onAddAttachmentClick = {
-                            // A brand-new note has no id yet (it's inserted on first keystroke),
-                            // so attachmentViewModel's noteId stays null and pick() would
-                            // silently no-op -- save the row now so the picker always has
-                            // somewhere to attach to, even on an empty note.
-                            screenScope.launch {
-                                val id = editorViewModel.ensureNoteSaved()
-                                attachmentViewModel.setNoteId(id)
-                                showAttachmentMenu = true
-                            }
-                        },
                         onRemoveAttachment = attachmentViewModel::remove,
                         onOpenAttachment = attachmentViewModel::open,
-                        onPasteImageClick = {
+                        isNotebookNote = isNotebookNote,
+                        initialRichHtml = richContentHtml,
+                        onRichHtmlChange = { html ->
+                            richContentViewModel.onHtmlChanged(html)
+                        },
+                        onRichPlainTextChange = { plainText ->
+                            // Fresh TextFieldValue, not editorState.content.copy(text=) -- the rich
+                            // editor owns its own cursor/selection, so reusing the old selection
+                            // range here could point past the end of the new plain text.
+                            editorViewModel.onUpdateContent(
+                                androidx.compose.ui.text.input.TextFieldValue(
+                                    text = plainText,
+                                    selection = androidx.compose.ui.text.TextRange(plainText.length)
+                                )
+                            )
+                        },
+                        onEditorFocusGained = {
+                            // Word-style paste: copy an image, tap into the note, it's attached --
+                            // no button. A brand-new note has no id yet, so save it first (same
+                            // "ensure saved" pattern onAddAttachmentClick above already uses).
                             screenScope.launch {
                                 val id = editorViewModel.ensureNoteSaved()
                                 attachmentViewModel.setNoteId(id)
-                                attachmentViewModel.pasteImageFromClipboard()
+                                attachmentViewModel.autoPasteFromClipboardIfNew()
                             }
                         }
                     )
@@ -464,15 +479,6 @@ fun NoteDetailScreen(
                 }
             }
         }
-    }
-
-    if (showAttachmentMenu) {
-        AttachmentPickerMenu(
-            onDismiss = { showAttachmentMenu = false },
-            onPickImage = attachmentViewModel::pickImage,
-            onPickVideo = attachmentViewModel::pickVideo,
-            onPickDocument = attachmentViewModel::pickDocument
-        )
     }
 
     if (showNotebookSheet) {
@@ -606,10 +612,13 @@ private fun NoteContent(
     onFabVisibility: (Boolean) -> Unit,
     showAttachments: Boolean,
     attachments: List<com.module.notelycompose.attachment.Attachment>,
-    onAddAttachmentClick: () -> Unit,
     onRemoveAttachment: (Long) -> Unit,
     onOpenAttachment: (com.module.notelycompose.attachment.Attachment) -> Unit,
-    onPasteImageClick: () -> Unit
+    isNotebookNote: Boolean,
+    initialRichHtml: String?,
+    onRichHtmlChange: (String) -> Unit,
+    onRichPlainTextChange: (String) -> Unit,
+    onEditorFocusGained: () -> Unit
 ) {
     val coroutineScope = rememberCoroutineScope()
     var showDeleteRecordingDialog by remember { mutableStateOf(false) }
@@ -685,41 +694,44 @@ private fun NoteContent(
                 )
             }
 
-            NoteEditor(
-                modifier = Modifier.fillMaxWidth().weight(1f),
-                editorState = editorState,
-                showFormatBar = showFormatBar,
-                focusRequester = focusRequester,
-                onFocusChange = onFocusChange,
-                textEditorViewModel = textEditorViewModel,
-                onFabVisibility = onFabVisibility
-            )
+            if (isNotebookNote) {
+                // Notebook (typed) notes get the rich-text editor -- bold/italic/underline/
+                // heading/bullet are real formatting here, not the range-based VisualTransformation
+                // hack NoteEditor below uses for voice notes. Image paste is automatic: copying a
+                // photo and tapping into this field attaches it right away (onEditorFocusGained),
+                // no separate "Dán ảnh"/"Đính kèm" buttons.
+                com.module.notelycompose.notebook.ui.NotebookRichEditor(
+                    modifier = Modifier.fillMaxWidth().weight(1f),
+                    initialHtml = initialRichHtml,
+                    focusRequester = focusRequester,
+                    onFocusChange = {
+                        onFocusChange(it)
+                        if (it) onEditorFocusGained()
+                    },
+                    onHtmlChange = onRichHtmlChange,
+                    onPlainTextChange = onRichPlainTextChange
+                )
+            } else {
+                NoteEditor(
+                    modifier = Modifier.fillMaxWidth().weight(1f),
+                    editorState = editorState,
+                    showFormatBar = showFormatBar,
+                    focusRequester = focusRequester,
+                    onFocusChange = onFocusChange,
+                    textEditorViewModel = textEditorViewModel,
+                    onFabVisibility = onFabVisibility
+                )
+            }
 
             if (showAttachments) {
-                Row(
-                    modifier = Modifier.padding(start = 20.dp, bottom = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    // "Dán ảnh" reads the clipboard directly -- copy a photo elsewhere, tap this,
-                    // it shows up immediately, no file-picker menu. Always offered alongside the
-                    // picker-based "Đính kèm", not a replacement for it (PDFs/videos still need
-                    // the picker).
-                    PasteImageButton(onClick = onPasteImageClick)
-                    // AttachmentStrip hides itself entirely when empty (so notes without
-                    // attachments render exactly as before this feature existed) -- this is the
-                    // one always-visible entry point to add the first one.
-                    if (attachments.isEmpty()) {
-                        AddAttachmentButton(onClick = onAddAttachmentClick)
-                    }
-                }
-                if (attachments.isNotEmpty()) {
-                    AttachmentStrip(
-                        attachments = attachments,
-                        onAddClick = onAddAttachmentClick,
-                        onRemove = onRemoveAttachment,
-                        onOpen = onOpenAttachment
-                    )
-                }
+                // Images arrive via auto-paste-on-focus; this strip is now only the always-visible
+                // entry point for PDFs/videos (via the "+" tile) and for viewing/removing whatever
+                // is already attached.
+                AttachmentStrip(
+                    attachments = attachments,
+                    onRemove = onRemoveAttachment,
+                    onOpen = onOpenAttachment
+                )
             }
         }
     }

@@ -21,6 +21,7 @@ class AttachmentViewModel(
 ) : ViewModel() {
 
     private val noteId = MutableStateFlow<Long?>(null)
+    private var lastAutoPasteFingerprint: String? = null
 
     val attachments: StateFlow<List<Attachment>> = noteId
         .flatMapLatest { id -> id?.let { repository.forNote(it) } ?: emptyFlow() }
@@ -46,18 +47,21 @@ class AttachmentViewModel(
     }
 
     /**
-     * Pastes whatever image is currently on the system clipboard straight into the note, the way
-     * pasting into Word drops the image in immediately -- no file-picker menu. Returns false when
-     * the clipboard has no image right now, so the caller can tell the user there was nothing to
-     * paste.
+     * Auto-paste: called whenever the note's text field regains focus, the way pasting into Word
+     * drops an image in immediately -- no button, no file-picker menu. Only actually reads/copies
+     * when the clipboard's image fingerprint has changed since the last successful paste, so
+     * refocusing the field repeatedly (without copying a new image in between) doesn't keep
+     * re-attaching the same picture.
      */
-    fun pasteImageFromClipboard(): Boolean {
-        val id = noteId.value ?: return false
-        val file = clipboardImageReader.read() ?: return false
+    fun autoPasteFromClipboardIfNew() {
+        val id = noteId.value ?: return
+        val fingerprint = clipboardImageReader.fingerprint() ?: return
+        if (fingerprint == lastAutoPasteFingerprint) return
+        val file = clipboardImageReader.read() ?: return
+        lastAutoPasteFingerprint = fingerprint
         viewModelScope.launch {
             withContext(Dispatchers.Default) { repository.add(id, file) }
         }
-        return true
     }
 
     fun remove(attachmentId: Long) {

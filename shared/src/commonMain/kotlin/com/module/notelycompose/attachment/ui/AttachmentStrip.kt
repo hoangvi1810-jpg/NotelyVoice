@@ -8,28 +8,13 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.ContentPaste
-import androidx.compose.material.icons.filled.Description
-import androidx.compose.material.icons.filled.Image
-import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -40,7 +25,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.module.notelycompose.attachment.Attachment
 import com.module.notelycompose.attachment.AttachmentKind
@@ -50,119 +34,36 @@ import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.decodeToImageBitmap
 
 /**
- * The row of attachment cards under a note's body, plus a trailing "+" card. Hidden entirely when
- * there are no attachments, so notes without any look exactly as they did before this feature
- * existed — use [AddAttachmentButton] for the always-visible entry point next to the toolbar.
- *
- * Image attachments render a real thumbnail (decoded on demand from disk, no caching beyond
- * Compose's own `remember`); video/PDF cards show a kind icon and filename only.
+ * Pasted images shown large and stacked vertically under a note's text -- not a picker/add-button
+ * row (removed: images now arrive purely via clipboard auto-paste-on-focus, see
+ * AttachmentViewModel.autoPasteFromClipboardIfNew, so there is nothing left to "add" here). Tap
+ * opens the image; long-press reveals a remove control.
  */
 @Composable
 fun AttachmentStrip(
     attachments: List<Attachment>,
-    onAddClick: () -> Unit,
     onRemove: (Long) -> Unit,
     onOpen: (Attachment) -> Unit
 ) {
-    if (attachments.isEmpty()) return
-    LazyRow(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-        contentPadding = PaddingValues(horizontal = 20.dp)
+    val images = attachments.filter { it.kind == AttachmentKind.IMAGE }
+    if (images.isEmpty()) return
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        items(attachments, key = { it.id }) { attachment ->
-            AttachmentCard(
+        images.forEach { attachment ->
+            PastedImage(
                 attachment = attachment,
                 onOpen = { onOpen(attachment) },
                 onRemove = { onRemove(attachment.id) }
             )
         }
-        item {
-            AddAttachmentCard(onClick = onAddClick)
-        }
-    }
-}
-
-/**
- * "Dán ảnh" -- reads whatever image is currently on the system clipboard and attaches it right
- * away, no file-picker menu. This is the paste-like shortcut next to [AddAttachmentButton]: copy
- * a photo elsewhere, tap this, done -- the way pasting into Word drops an image in immediately.
- */
-@Composable
-fun PasteImageButton(onClick: () -> Unit) {
-    val colors = LocalCustomColors.current
-    Row(
-        modifier = Modifier
-            .clip(RoundedCornerShape(20.dp))
-            .background(colors.accentSoft)
-            .clickable { onClick() }
-            .padding(horizontal = 14.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(
-            imageVector = Icons.Default.ContentPaste,
-            contentDescription = null,
-            tint = colors.accent,
-            modifier = Modifier.size(16.dp)
-        )
-        Spacer(modifier = Modifier.width(6.dp))
-        Text(
-            text = "Dán ảnh",
-            style = MaterialTheme.typography.labelLarge,
-            color = colors.accent
-        )
-    }
-}
-
-/** The "+ Đính kèm" affordance next to the format toolbar, visible even with zero attachments. */
-@Composable
-fun AddAttachmentButton(onClick: () -> Unit) {
-    val colors = LocalCustomColors.current
-    Row(
-        modifier = Modifier
-            .clip(RoundedCornerShape(20.dp))
-            .background(colors.accentSoft)
-            .clickable { onClick() }
-            .padding(horizontal = 14.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(
-            imageVector = Icons.Default.Add,
-            contentDescription = null,
-            tint = colors.accent,
-            modifier = Modifier.size(18.dp)
-        )
-        Spacer(modifier = Modifier.width(6.dp))
-        Text(
-            text = "Đính kèm",
-            style = MaterialTheme.typography.labelLarge,
-            color = colors.accent
-        )
-    }
-}
-
-@Composable
-private fun AddAttachmentCard(onClick: () -> Unit) {
-    val colors = LocalCustomColors.current
-    Box(
-        modifier = Modifier
-            .size(width = 88.dp, height = 96.dp)
-            .clip(RoundedCornerShape(16.dp))
-            .background(colors.accentSoft)
-            .clickable { onClick() },
-        contentAlignment = Alignment.Center
-    ) {
-        Icon(
-            imageVector = Icons.Default.Add,
-            contentDescription = "Thêm đính kèm",
-            tint = colors.accent
-        )
     }
 }
 
 @OptIn(ExperimentalResourceApi::class)
 @Composable
-private fun AttachmentCard(
+private fun PastedImage(
     attachment: Attachment,
     onOpen: () -> Unit,
     onRemove: () -> Unit
@@ -170,27 +71,20 @@ private fun AttachmentCard(
     val colors = LocalCustomColors.current
     var confirmingRemove by remember { mutableStateOf(false) }
     val interactionSource = remember { MutableInteractionSource() }
-    val icon = when (attachment.kind) {
-        AttachmentKind.IMAGE -> Icons.Default.Image
-        AttachmentKind.VIDEO -> Icons.Default.PlayArrow
-        AttachmentKind.PDF -> Icons.Default.Description
+
+    val thumbnail: ImageBitmap? = remember(attachment.path) {
+        try {
+            readAttachmentBytes(attachment.path)?.decodeToImageBitmap()
+        } catch (e: Exception) {
+            null
+        }
     }
 
-    val thumbnail: ImageBitmap? = if (attachment.kind == AttachmentKind.IMAGE) {
-        remember(attachment.path) {
-            try {
-                readAttachmentBytes(attachment.path)?.decodeToImageBitmap()
-            } catch (e: Exception) {
-                null
-            }
-        }
-    } else {
-        null
-    }
+    if (thumbnail == null) return
 
     Box(
         modifier = Modifier
-            .size(width = 88.dp, height = 96.dp)
+            .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
             .background(colors.surfaceSunken)
             .combinedClickable(
@@ -200,35 +94,12 @@ private fun AttachmentCard(
                 onLongClick = { confirmingRemove = true }
             )
     ) {
-        if (thumbnail != null) {
-            Image(
-                bitmap = thumbnail,
-                contentDescription = attachment.displayName,
-                modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Crop
-            )
-        } else {
-            Column(
-                modifier = Modifier.fillMaxSize().padding(8.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
-            ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = colors.accent,
-                    modifier = Modifier.size(28.dp)
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = attachment.displayName,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = colors.onSurfaceVariant,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-        }
+        Image(
+            bitmap = thumbnail,
+            contentDescription = attachment.displayName,
+            modifier = Modifier.fillMaxWidth(),
+            contentScale = ContentScale.FillWidth
+        )
 
         if (confirmingRemove) {
             Box(
@@ -240,7 +111,7 @@ private fun AttachmentCard(
             ) {
                 Icon(
                     imageVector = Icons.Default.Close,
-                    contentDescription = "Xoá đính kèm",
+                    contentDescription = "Xoá ảnh",
                     tint = colors.onDanger
                 )
             }

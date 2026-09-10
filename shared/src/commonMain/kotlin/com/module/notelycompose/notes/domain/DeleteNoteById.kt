@@ -3,6 +3,7 @@ package com.module.notelycompose.notes.domain
 import com.module.notelycompose.ai.AiContentDataSource
 import com.module.notelycompose.attachment.AttachmentRepository
 import com.module.notelycompose.notebook.NotebookRepository
+import com.module.notelycompose.notebook.RichContentRepository
 
 /**
  * The single choke point for deleting a note — both the list screen and the note detail screen go
@@ -15,12 +16,14 @@ class DeleteNoteById(
     private val noteDataSource: NoteDataSource,
     private val aiContentDataSource: AiContentDataSource,
     private val notebookRepository: NotebookRepository,
-    private val attachmentRepository: AttachmentRepository
+    private val attachmentRepository: AttachmentRepository,
+    private val richContentRepository: RichContentRepository
 ) {
     suspend fun execute(id: Long) {
         aiContentDataSource.deleteByNoteId(id)
         notebookRepository.removeNote(id)
         attachmentRepository.removeAllForNote(id)
+        richContentRepository.removeForNote(id)
         return noteDataSource.deleteNoteById(id)
     }
 }

@@ -1,0 +1,19 @@
+-- Rich (HTML) body for notebook (typed) notes only. Voice notes never write here.
+--
+-- notesEntity.content stays the plain-text mirror of this HTML (kept in sync on every autosave
+-- from NotebookRichEditor) so search / AI prompts / PDF export keep working unmodified -- they
+-- only ever read notesEntity.content, never this table. No FOREIGN KEY, matching attachmentEntity
+-- (SQLite foreign_keys enforcement is off in this project's drivers).
+CREATE TABLE richContentEntity(
+    note_id INTEGER NOT NULL PRIMARY KEY,
+    html TEXT NOT NULL
+);
+
+getRichContent:
+SELECT html FROM richContentEntity WHERE note_id = :note_id;
+
+upsertRichContent:
+INSERT OR REPLACE INTO richContentEntity(note_id, html) VALUES(:note_id, :html);
+
+deleteRichContentForNote:
+DELETE FROM richContentEntity WHERE note_id = :note_id;

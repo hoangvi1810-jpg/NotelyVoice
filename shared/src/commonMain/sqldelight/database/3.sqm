@@ -1,0 +1,7 @@
+-- Migration 3 -> 4: rich (HTML) body for notebook notes. See 1.sqm for why every schema change
+-- needs one of these files.
+
+CREATE TABLE IF NOT EXISTS richContentEntity(
+    note_id INTEGER NOT NULL PRIMARY KEY,
+    html TEXT NOT NULL
+);

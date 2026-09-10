@@ -76,6 +76,10 @@ kotlin {
             implementation(libs.compose.vectorize.core)
             implementation(libs.kotlinx.serialization.json)
 
+            // Rich text editor for notebook (typed) notes only -- voice notes keep the existing
+            // BasicTextField-based NoteEditor untouched.
+            implementation(libs.richeditor.compose)
+
             // koin
             implementation(libs.koin.core)
             implementation(libs.koin.test)
