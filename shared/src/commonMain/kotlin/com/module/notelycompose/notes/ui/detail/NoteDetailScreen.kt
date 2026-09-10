@@ -175,7 +175,19 @@ fun NoteDetailScreen(
     // save, or already assigned in the DB) is a typed note and must never offer recording -- that
     // is exactly how a "note" ends up with audio attached and bleeds into the voice-note world the
     // notebook screens are supposed to be walled off from.
-    val isNotebookNote = pendingNotebook != null || currentNotebookId != null
+    //
+    // Latched via everNotebookNote rather than read fresh every recomposition: right after
+    // ensureNoteSaved() on a brand-new notebook note, the effect below clears pendingNotebook
+    // (now null) and calls notebookViewModel.assign(id, ...) to set currentNotebookId -- but that
+    // assignment lands asynchronously (a DB write + Flow read-back), so for one or more
+    // recompositions in between, BOTH pendingNotebook and currentNotebookId read null and this
+    // condition flips false. That silently swapped NotebookRichEditor out for the voice NoteEditor
+    // and back, destroying and recreating all of NotebookRichEditor's remembered state (including
+    // anything just pasted/typed) -- a real bug this hit while testing the "Dán" paste button.
+    // Once true for this screen instance, it must never read false again.
+    var everNotebookNote by remember { mutableStateOf(false) }
+    val isNotebookNote = pendingNotebook != null || currentNotebookId != null || everNotebookNote
+    if (isNotebookNote) everNotebookNote = true
 
     // Keyed on isNotebookNote too, not just currentNoteId: for an EXISTING notebook note opened
     // directly, currentNoteId is already the real id on the very first composition, while
@@ -456,13 +468,24 @@ fun NoteDetailScreen(
                             )
                         },
                         onEditorFocusGained = {
-                            // Word-style paste: copy an image, tap into the note, it's attached --
-                            // no button. A brand-new note has no id yet, so save it first (same
-                            // "ensure saved" pattern onAddAttachmentClick above already uses).
+                            // Word-style auto-paste: copy an image, tap into the note, it's
+                            // attached -- covers the common case of tapping INTO the field from
+                            // elsewhere. Doesn't cover the field already being focused when a new
+                            // image gets copied (no focus-change event fires then) -- that's what
+                            // the manual "Dán" button (onManualPasteClick) is for.
                             screenScope.launch {
                                 val id = editorViewModel.ensureNoteSaved()
                                 attachmentViewModel.setNoteId(id)
                                 attachmentViewModel.autoPasteFromClipboardIfNew()
+                            }
+                        },
+                        onManualPasteClick = {
+                            // A brand-new note has no id yet, so save it first (same "ensure
+                            // saved" pattern onAddAttachmentClick/onEditorFocusGained use).
+                            screenScope.launch {
+                                val id = editorViewModel.ensureNoteSaved()
+                                attachmentViewModel.setNoteId(id)
+                                attachmentViewModel.pasteImageFromClipboardNow()
                             }
                         }
                     )
@@ -618,7 +641,8 @@ private fun NoteContent(
     initialRichHtml: String?,
     onRichHtmlChange: (String) -> Unit,
     onRichPlainTextChange: (String) -> Unit,
-    onEditorFocusGained: () -> Unit
+    onEditorFocusGained: () -> Unit,
+    onManualPasteClick: () -> Unit
 ) {
     val coroutineScope = rememberCoroutineScope()
     var showDeleteRecordingDialog by remember { mutableStateOf(false) }
@@ -697,9 +721,11 @@ private fun NoteContent(
             if (isNotebookNote) {
                 // Notebook (typed) notes get the rich-text editor -- bold/italic/underline/
                 // heading/bullet are real formatting here, not the range-based VisualTransformation
-                // hack NoteEditor below uses for voice notes. Image paste is automatic: copying a
-                // photo and tapping into this field attaches it right away (onEditorFocusGained),
-                // no separate "Dán ảnh"/"Đính kèm" buttons.
+                // hack NoteEditor below uses for voice notes. Image paste auto-triggers on focus
+                // (onEditorFocusGained) as a convenience, but the "Dán" button is the reliable path
+                // -- the underlying rich-editor library doesn't support native long-press
+                // select/copy/paste for text, and auto-paste-on-focus alone misses the case of the
+                // field already being focused when a new image gets copied.
                 com.module.notelycompose.notebook.ui.NotebookRichEditor(
                     modifier = Modifier.fillMaxWidth().weight(1f),
                     initialHtml = initialRichHtml,
@@ -709,7 +735,8 @@ private fun NoteContent(
                         if (it) onEditorFocusGained()
                     },
                     onHtmlChange = onRichHtmlChange,
-                    onPlainTextChange = onRichPlainTextChange
+                    onPlainTextChange = onRichPlainTextChange,
+                    onImagePasteClick = onManualPasteClick
                 )
             } else {
                 NoteEditor(

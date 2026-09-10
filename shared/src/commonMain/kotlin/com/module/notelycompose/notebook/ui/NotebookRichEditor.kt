@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material.icons.filled.FormatBold
 import androidx.compose.material.icons.filled.FormatItalic
 import androidx.compose.material.icons.filled.FormatListBulleted
@@ -21,6 +22,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -31,6 +33,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontStyle
@@ -49,6 +52,12 @@ import com.module.notelycompose.notes.ui.theme.LocalCustomColors
  * the existing BasicTextField-based `NoteEditor` in NoteDetailScreen.kt untouched. Persists via
  * [onHtmlChange] (debounced by the caller) and mirrors plain text out via [onPlainTextChange] so
  * search/AI/export keep reading notesEntity.content unchanged.
+ *
+ * [onImagePasteClick] backs a manual "Dán" button (see [PasteButton] below): the rich-editor
+ * library this wraps (richeditor-compose, still pre-1.0) doesn't surface Android/iOS's native
+ * long-press select/copy/paste gesture for text, and clipboard-image auto-paste-on-focus alone
+ * missed the common case of the field already being focused when a new image gets copied -- a
+ * button the user can always tap is the reliable fallback for both.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -58,7 +67,78 @@ fun NotebookRichEditor(
     focusRequester: FocusRequester,
     onFocusChange: (Boolean) -> Unit,
     onHtmlChange: (String) -> Unit,
-    onPlainTextChange: (String) -> Unit
+    onPlainTextChange: (String) -> Unit,
+    onImagePasteClick: () -> Unit
+) {
+    val clipboardManager = LocalClipboardManager.current
+
+    // `RichTextState.setHtml()` only reliably updates what's actually drawn when it runs during
+    // this editor's first composition (the initialHtml path below) -- calling it later, e.g. from
+    // the "Dán" button after the field is already mounted, updates state.annotatedString/toHtml()
+    // (confirmed via logging) but the visible BasicTextField never redraws. Rather than fight that,
+    // a text paste goes through the exact same reliable path a fresh note-open uses: bump
+    // `remountKey` to fully discard and recreate the state with the new content as its initial
+    // value. `pendingHtml` tracks what that recreation should hydrate from -- it starts at
+    // [initialHtml] and only a text-paste ever reassigns it.
+    var remountKey by remember { mutableStateOf(0) }
+    var pendingHtml by remember { mutableStateOf(initialHtml) }
+    var lastEditorPlainText by remember { mutableStateOf("") }
+    // A paste triggers ensureNoteSaved() in the caller (a brand-new note has no id yet), which
+    // changes currentNoteId, which makes NoteDetailScreen re-run richContentViewModel.load(id) for
+    // this now-real id -- but the paste's own HTML save is debounced (~500ms) and hasn't reached
+    // the DB yet, so that reload reads back nothing and this effect would stomp the just-pasted
+    // pendingHtml with null moments after setting it. Once a paste has happened locally, ignore any
+    // further initialHtml updates from the parent for the rest of this screen's lifetime -- this
+    // editor is now the source of truth for its own content, same as a normal BasicTextField.
+    var hasLocalEdit by remember { mutableStateOf(false) }
+
+    LaunchedEffect(initialHtml) {
+        if (!hasLocalEdit) pendingHtml = initialHtml
+    }
+
+    key(remountKey) {
+        EditorContent(
+            modifier = modifier,
+            initialHtml = pendingHtml,
+            focusRequester = focusRequester,
+            onFocusChange = onFocusChange,
+            onHtmlChange = onHtmlChange,
+            onPlainTextChange = {
+                lastEditorPlainText = it
+                onPlainTextChange(it)
+            },
+            onPasteClick = {
+                focusRequester.requestFocus()
+                val text = clipboardManager.getText()?.text
+                if (!text.isNullOrEmpty()) {
+                    hasLocalEdit = true
+                    val combined = if (lastEditorPlainText.isEmpty()) {
+                        text
+                    } else {
+                        "$lastEditorPlainText\n$text"
+                    }
+                    val html = "<p>${escapeHtml(combined)}</p>"
+                    pendingHtml = html
+                    onHtmlChange(html)
+                    onPlainTextChange(combined)
+                    remountKey++
+                }
+                onImagePasteClick()
+            }
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun EditorContent(
+    modifier: Modifier,
+    initialHtml: String?,
+    focusRequester: FocusRequester,
+    onFocusChange: (Boolean) -> Unit,
+    onHtmlChange: (String) -> Unit,
+    onPlainTextChange: (String) -> Unit,
+    onPasteClick: () -> Unit
 ) {
     val colors = LocalCustomColors.current
     val state = rememberRichTextState()
@@ -91,6 +171,11 @@ fun NotebookRichEditor(
     var isFocused by remember { mutableStateOf(false) }
 
     Column(modifier = modifier) {
+        Row(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = if (isFocused) 0.dp else 8.dp)
+        ) {
+            PasteButton(onClick = onPasteClick)
+        }
         if (isFocused) {
             RichEditorToolbar(state = state)
         }
@@ -117,6 +202,26 @@ fun NotebookRichEditor(
                 unfocusedIndicatorColor = Color.Transparent
             )
         )
+    }
+}
+
+private fun escapeHtml(text: String): String = text
+    .replace("&", "&amp;")
+    .replace("<", "&lt;")
+    .replace(">", "&gt;")
+    .replace("\n", "<br>")
+
+@Composable
+private fun PasteButton(onClick: () -> Unit) {
+    val colors = LocalCustomColors.current
+    IconButton(
+        onClick = onClick,
+        modifier = Modifier
+            .size(36.dp)
+            .clip(RoundedCornerShape(10.dp))
+            .background(colors.accentSoft)
+    ) {
+        Icon(imageVector = Icons.Default.ContentPaste, contentDescription = "Dán", tint = colors.accent)
     }
 }
 

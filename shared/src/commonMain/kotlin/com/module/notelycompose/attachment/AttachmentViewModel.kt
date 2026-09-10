@@ -64,6 +64,23 @@ class AttachmentViewModel(
         }
     }
 
+    /**
+     * Manual "Dán" button: always reads/attaches whatever image is on the clipboard right now,
+     * bypassing the fingerprint dedupe [autoPasteFromClipboardIfNew] uses -- the user explicitly
+     * asked for this paste, so it should happen even if the clipboard hasn't changed since the last
+     * auto-paste. Still updates the fingerprint afterwards so a later auto-paste-on-focus doesn't
+     * immediately re-attach the same image. Returns true if an image was found and attached.
+     */
+    fun pasteImageFromClipboardNow(): Boolean {
+        val id = noteId.value ?: return false
+        val file = clipboardImageReader.read() ?: return false
+        lastAutoPasteFingerprint = clipboardImageReader.fingerprint()
+        viewModelScope.launch {
+            withContext(Dispatchers.Default) { repository.add(id, file) }
+        }
+        return true
+    }
+
     fun remove(attachmentId: Long) {
         viewModelScope.launch {
             withContext(Dispatchers.Default) { repository.remove(attachmentId) }
