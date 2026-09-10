@@ -1,6 +1,6 @@
 # Quy tắc kỹ thuật — Notely Voice
 
-Cập nhật 10/9/2026. Đọc file này trước khi sửa code, tránh lặp lại lỗi đã tốn nhiều giờ mới tìm ra.
+Cập nhật 10/9/2026 (phiên rich-text editor + auto-paste ảnh). Đọc file này trước khi sửa code, tránh lặp lại lỗi đã tốn nhiều giờ mới tìm ra.
 
 ---
 
@@ -49,14 +49,41 @@ Khi một hàm/thuộc tính Objective-C được khai báo trong một **catego
 ### Tách biệt UI ghi âm vs note gõ tay (yêu cầu đã chốt, dễ tái phạm)
 
 `NoteDetailScreen.kt` dùng chung cho cả 2 loại note. Cờ `isNotebookNote = pendingNotebook != null || currentNotebookId != null` quyết định:
-- **Chỉ hiện khi `isNotebookNote == true`**: `NotebookRow` (badge sổ tay), `AddAttachmentButton`/`AttachmentStrip`/`PasteImageButton` (đính kèm + dán ảnh).
-- **Chỉ hiện khi `isNotebookNote == false`**: nút mic FAB (ghi âm).
+- **Chỉ hiện khi `isNotebookNote == true`**: `NotebookRow` (badge sổ tay), `NotebookRichEditor` (thay cho `NoteEditor`), `AttachmentStrip` (ảnh đã dán, xem mục 4).
+- **Chỉ hiện khi `isNotebookNote == false`**: nút mic FAB (ghi âm), `NoteEditor` (BasicTextField cũ), panel Title/Heading/Subheading cũ (`FormatBar`), 2 icon "Aa"/bullet-list ở `BottomNavigationBar` (đã gate bằng param `isNotebookNote` mới thêm vào `BottomNavigationBar`).
 
 Nếu thêm tính năng mới vào `NoteDetailScreen`, luôn tự hỏi: tính năng này thuộc về note ghi âm hay note gõ tay? Đừng để nó hiện ở cả 2 — đó chính xác là thứ user đã bực mình nhiều lần trong phiên 9-10/9/2026.
 
 ---
 
-## 4. Quy trình build & test bắt buộc trước khi push iOS
+## 4. Rich-text editor + dán ảnh tự động cho note gõ tay (thêm 10/9/2026)
+
+### Kiến trúc
+- Thư viện: `com.mohamedrejeb.richeditor:richeditor-compose` (`gradle/libs.versions.toml` key `richEditor = "1.0.0-rc13"`), thêm vào `shared/build.gradle.kts` khối `commonMain.dependencies`. Bản này build với Kotlin 2.1.21 + Compose 1.8.2 — khớp version app đang pin (Kotlin 2.2.0, CMP 1.8.2), verify qua CI thành công.
+- `NotebookRichEditor` (`notebook/ui/NotebookRichEditor.kt`) — composable mới, chỉ dùng cho note gõ tay. **Không sửa `NoteEditor` cũ** (dòng ~805 `NoteDetailScreen.kt`) — nó vẫn phục vụ note ghi âm y nguyên.
+- Lưu HTML ở bảng mới `richContentEntity(note_id PK, html)` (`sqldelight/database/richContent.sq`, migration `3.sqm` — nối tiếp `1.sqm`/`2.sqm`, chỉ `CREATE TABLE`, không đụng bảng cũ). Đồng thời mirror plain text vào `notesEntity.content` như cũ (qua `TextEditorViewModel.onUpdateContent`) — search/AI/export không cần sửa gì.
+- `RichContentRepository`/`RichContentViewModel` (package `notebook/`) — theo đúng khuôn `AttachmentRepository`/`AttachmentViewModel`, đăng ký Koin trong `Modules.kt`. `DeleteNoteById` đã thêm bước dọn `richContentEntity` khi xoá note (giống pattern dọn `attachmentEntity`).
+
+### Bẫy đã gặp và đã fix: mất nội dung khi mở lại note
+`rememberRichTextState()` luôn khởi tạo rỗng. Composable mount → `LaunchedEffect(state.annotatedString)` bắn ngay lập tức với state rỗng, TRƯỚC KHI HTML đã lưu load xong từ DB (load là bất đồng bộ). Nếu không chặn, giá trị rỗng này bị lưu đè lên nội dung thật ~500ms sau (do debounce) — **note mất sạch nội dung khi mở lại, không cần gõ gì**.
+
+Đã fix bằng cờ `readyToPersist` trong `NotebookRichEditor`: chỉ cho phép gọi `onHtmlChange`/`onPlainTextChange` khi (a) cha đã xác nhận load xong (`initialHtml != null`, kể cả khi là chuỗi rỗng `""` nghĩa là "đã load, xác nhận không có gì") HOẶC (b) người dùng đã thật sự gõ nội dung (`state.annotatedString.text.isNotEmpty()`) — case này cho note hoàn toàn mới, chưa từng gọi `load()`. **Nếu sửa lại luồng load/save của editor này, bắt buộc giữ nguyên logic chống-đè kiểu này**, không được bỏ qua "chờ load xong mới cho lưu".
+
+Liên quan: `LaunchedEffect(currentNoteId, isNotebookNote)` trong `NoteDetailScreen.kt` (gọi `richContentViewModel.load(id)`) phải key theo **cả 2** biến, không chỉ `currentNoteId`. Lý do: mở 1 note gõ tay có sẵn, `currentNoteId` đã đúng ngay từ đầu, nhưng `isNotebookNote` (phụ thuộc `notebookState.assignments` load bất đồng bộ từ DB) có thể còn `false` ở khoảnh khắc effect chạy lần đầu — nếu chỉ key theo `currentNoteId`, effect không bao giờ chạy lại khi `isNotebookNote` chuyển `true`, khiến `richContentViewModel.load()` không bao giờ được gọi.
+
+### Dán ảnh tự động — đã xoá nút "Dán ảnh"/"Đính kèm", xoá cả picker Video/PDF
+User yêu cầu rõ: không cần nút, chạm vào ô văn bản là ảnh trong clipboard tự dán vào note. Đã xoá luôn `AttachmentPickerMenu`, `showAttachmentMenu`, panel Title/Heading/Subheading cũ theo yêu cầu (thấy thừa, chiếm chỗ).
+
+- `AttachmentViewModel.autoPasteFromClipboardIfNew()` (thay thế `pasteImageFromClipboard()` cũ) — gọi từ `NotebookRichEditor`'s `onFocusChange` khi field nhận focus.
+- Chống dán lặp: `ClipboardImageReader.fingerprint()` (method mới trên expect/actual class) — Android trả URI string, iOS trả `UIPasteboard.generalPasteboard.changeCount.toString()`. So với fingerprint lần dán tự động gần nhất, trùng thì bỏ qua.
+- `AttachmentStrip` viết lại: ảnh full-width xếp dọc (không còn thẻ nhỏ nằm ngang + nút "+"), chỉ hiện `AttachmentKind.IMAGE` (video/PDF không còn đường vào từ note gõ tay vì picker đã xoá).
+
+### Lưu ý cinterop mới trong phiên này
+`UIPasteboard.generalPasteboard.changeCount` — theo đúng quy tắc mục 2, đã chủ động thêm `import platform.UIKit.changeCount` trước khi build (category member), build CI qua thành công lần đầu.
+
+---
+
+## 5. Quy trình build & test bắt buộc trước khi push iOS
 
 1. Sửa code trong `C:\dev\notely-repo`.
 2. Build + cài Android emulator (`NotelyTest`) trước — nhanh (~20-45s), bắt được phần lớn lỗi logic/UI chung giữa 2 nền tảng.
@@ -85,7 +112,7 @@ gh run view <run-id> --repo hoangvi1810-jpg/NotelyVoice --log-failed   # nếu f
 
 ---
 
-## 5. Việc khác cần nhớ
+## 6. Việc khác cần nhớ
 
 - **Emulator test data không đáng tin cậy tuyệt đối** — nhiều vòng cài đè/`pm clear` trong 1 phiên dài có thể để lại DB ở trạng thái version lệch (`Can't downgrade database from version X to Y`). Nếu gặp crash kiểu này trên emulator, `pm clear` là cách nhanh nhất để loại trừ nguyên nhân "dữ liệu test cũ" trước khi nghi ngờ code.
 - **Xoá sổ tay không xoá note** — note bên trong chuyển về "Chưa phân loại". Không có cascade-delete, không có undo.

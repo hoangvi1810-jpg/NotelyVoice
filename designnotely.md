@@ -1,6 +1,6 @@
 # Thiết kế / UI — Notely Voice
 
-Cập nhật 10/9/2026. Ghi lại các quyết định thiết kế đã chốt, để không hỏi lại hay làm sai hướng đã thống nhất.
+Cập nhật 10/9/2026 (phiên rich-text editor + auto-paste ảnh). Ghi lại các quyết định thiết kế đã chốt, để không hỏi lại hay làm sai hướng đã thống nhất.
 
 ---
 
@@ -14,8 +14,9 @@ App có 2 luồng độc lập, **không được lẫn vào nhau ở bất kỳ
    - **Không có** badge sổ tay, **không có** nút đính kèm/dán ảnh.
 2. **Note gõ tay (notebook)** — vào từ hamburger drawer → chọn 1 sổ tay → nút "+" trong màn sổ tay đó. Note tạo ra từ đây:
    - Tự động gán vào đúng sổ tay đang mở, hiện badge tên sổ (VD "Nhật ký").
-   - Có nút "Đính kèm" (chọn Ảnh/Video/PDF qua picker) và nút "Dán ảnh" (đọc thẳng từ clipboard).
-   - **Không có** nút mic ghi âm.
+   - Dùng **rich-text editor thật** (`NotebookRichEditor`, xem mục riêng bên dưới) — không dùng `NoteEditor` (BasicTextField) của note ghi âm.
+   - Dán ảnh **tự động khi chạm vào ô văn bản** — không có nút "Đính kèm" hay "Dán ảnh" nào cả (đã xoá hẳn, xem mục "Đính kèm ảnh/file" bên dưới).
+   - **Không có** nút mic ghi âm, **không có** panel Title/Heading/Subheading cũ (đã xoá, xem bên dưới).
 
 Màn Home chỉ liệt kê note ghi âm (`recordingPath` không rỗng). Note gõ tay **không bao giờ** xuất hiện ở Home — chỉ thấy trong đúng màn sổ tay của nó (hoặc "Tất cả sổ" trong drawer nếu muốn xem gộp — cân nhắc thêm sau, hiện tại mỗi sổ có màn riêng).
 
@@ -42,30 +43,41 @@ Bấm vào 1 sổ → đóng drawer → điều hướng tới `NotebookNotesScr
 
 Dùng chung code cho cả 2 loại note (không tách 2 file riêng), phân nhánh UI bằng cờ:
 - `hasAiContext = recording.isRecordingExist || aiUiState.hasGenerated` → quyết định có hiện 4 tab AI hay không.
-- `isNotebookNote = pendingNotebook != null || currentNotebookId != null` → quyết định hiện badge sổ tay + đính kèm (true) hay nút mic (false).
+- `isNotebookNote = pendingNotebook != null || currentNotebookId != null` → quyết định:
+  - Hiện badge sổ tay (`NotebookRow`), dùng `NotebookRichEditor` thay vì `NoteEditor`, hiện `AttachmentStrip` (ảnh đã dán) → khi `true`.
+  - Hiện nút mic FAB, panel Title/Heading/Subheading cũ, 2 icon "Aa"/bullet-list ở bottom bar → khi `false`.
 
 Tiêu đề tách biệt khỏi nội dung (gõ tiêu đề riêng, không tự lấy dòng đầu nội dung ghi đè — trừ khi tiêu đề đang trống thì mới tự động lấy dòng đầu làm gợi ý).
 
 ---
 
-## Đính kèm ảnh/file
+## Rich-text editor cho note gõ tay (mới, 10/9/2026)
 
-### Thẻ đính kèm — ảnh hiện thumbnail thật
-Ban đầu chỉ hiện icon chung chung (Image/PlayArrow/Description) + tên file. Đã nâng cấp: ảnh (`AttachmentKind.IMAGE`) decode byte thật thành `ImageBitmap` (qua `org.jetbrains.compose.resources.decodeToImageBitmap`) và hiện đúng ảnh, `ContentScale.Crop` lấp đầy thẻ 88×96dp. Video/PDF vẫn giữ icon (không làm thumbnail — không đáng công sức thêm thư viện).
+Note gõ tay giờ dùng `NotebookRichEditor` (`notebook/ui/NotebookRichEditor.kt`), bọc thư viện `com.mohamedrejeb.richeditor:richeditor-compose` (bản `1.0.0-rc13`, build với Kotlin 2.1.21 + Compose 1.8.2 — khớp version app đang dùng). Note ghi âm **không đụng tới** — vẫn dùng `NoteEditor` (BasicTextField) cũ y nguyên.
 
-**Quyết định UI đã hỏi & chốt** (nhưng chưa triển khai đầy đủ — vẫn đang ở dạng thẻ nhỏ nằm ngang): về lâu dài user muốn ảnh **to, xếp dọc dưới văn bản** (kiểu Evernote/Notion) thay vì thẻ vuông nhỏ nằm ngang. Việc này **chưa làm** — ghi chú lại để làm tiếp khi có thời gian, không phải quên.
+- Toolbar riêng nổi lên trên khi focus vào ô văn bản: B / I / U / T (heading giả bằng cỡ chữ to+đậm) / bullet list — thay thế hoàn toàn panel "Title/Heading/Subheading/Body" cũ (đã xoá, xem lý do bên dưới).
+- Lưu 2 bản song song mỗi lần đổi nội dung (debounce 500ms):
+  - HTML (`richTextState.toHtml()`) → bảng mới `richContentEntity(note_id PK, html)`.
+  - Plain text mirror → vẫn ghi vào `notesEntity.content` qua đúng `TextEditorViewModel.onUpdateContent` như trước — để tìm kiếm/AI/xuất PDF không cần sửa gì.
+- **Bẫy đã gặp và đã fix**: `rememberRichTextState()` luôn khởi tạo rỗng, nên khi mở lại 1 note đã có nội dung, có một khoảnh khắc rất ngắn trạng thái rỗng này bị lưu đè lên nội dung thật (do load HTML từ DB là bất đồng bộ, chạy sau). Hậu quả thực tế: mở lại note là mất sạch nội dung đã lưu. Đã fix bằng cờ `readyToPersist` trong `NotebookRichEditor` — chỉ cho phép lưu khi đã nhận được tín hiệu load xong từ cha (`initialHtml != null`) HOẶC người dùng đã thật sự gõ gì đó (`text.isNotEmpty()`). Nếu sau này sửa lại cơ chế load/save của editor này, nhớ giữ nguyên logic chống-đè này.
 
-### "Dán ảnh" — tính năng mới quan trọng nhất trong đợt sửa 9-10/9/2026
-User muốn trải nghiệm giống dán ảnh vào Word: copy ảnh ở đâu đó → vào note → dán → ảnh hiện ra ngay, **không phải** qua menu "Đính kèm > Ảnh > chọn từ thư viện" (3 bước).
+## Đính kèm ảnh/file — đã đổi hoàn toàn hướng (10/9/2026)
 
-Giải pháp đã chọn (cân nhắc kỹ, không đánh cược vào API chưa chắc chắn hoạt động trên iOS — xem lý do bên dưới): thêm nút **"Dán ảnh"** riêng, đứng cạnh "Đính kèm", **1 chạm**:
-- Đọc thẳng ảnh đang có trong clipboard hệ thống (Android: `ClipboardManager` + kiểm tra `ClipData` có URI ảnh; iOS: `UIPasteboard.generalPasteboard.image`).
-- Lưu vào storage app (giống hệt luồng đính kèm bình thường), gắn vào note ngay lập tức.
-- Không tìm thấy ảnh trong clipboard → im lặng không làm gì (chưa có thông báo lỗi dạng snackbar — biết là thiếu, chấp nhận do thời gian gấp).
+### Đã xoá: nút "Đính kèm", nút "Dán ảnh", picker chọn Ảnh/Video/PDF, panel Title/Heading/Subheading cũ
+User phản hồi rõ ràng các UI này **thừa và chiếm chỗ** sau khi có tính năng dán ảnh tự động (xem mục dưới) — đã xoá hẳn khỏi note gõ tay, không giữ lại dạng ẩn. `AttachmentPickerMenu` không còn được gọi từ đâu trong `NoteDetailScreen.kt` nữa (file component vẫn còn tồn tại trong repo, chỉ là không dùng — không xoá file vì risk thấp hơn giữ lại so với động vào cross-platform picker code).
 
-**Vì sao không hook thẳng vào gesture "Dán" (paste) gốc của hệ điều hành thay vì thêm nút riêng?** Đã cân nhắc dùng `Modifier.receiveContent` (Compose Foundation ReceiveContent API) để bắt sự kiện dán ảnh ngay trong `BasicTextField`, đúng chuẩn "như Word" 100%. Nhưng API này khá mới, chưa chắc chắn đã có mặt đầy đủ trên target iOS của Compose Multiplatform 1.8.2, và **không thể verify tại chỗ** (không có Mac). Đánh cược vào 1 API chưa chắc + không test được = rủi ro cao, đặc biệt sau khi đã tốn 4 lần build fail vì lỗi cinterop khác trong đúng phiên này. Chọn phương án "nút Dán ảnh" vì: chắc chắn hoạt động (dùng đúng API clipboard đơn giản, đã có precedent), triển khai nhanh, chỉ tốn 1 lần chạm thêm so với "Ctrl+V" thật.
+### Dán ảnh tự động khi chạm vào ô văn bản — không cần bấm nút
+User muốn trải nghiệm giống dán ảnh vào Word: copy ảnh ở đâu đó → chạm vào note → ảnh tự xuất hiện, không qua bất kỳ menu/nút nào.
 
-Nếu sau này muốn nâng cấp lên dán thật (không cần bấm nút), thử `Modifier.receiveContent` — nhưng phải test được trên thiết bị iOS thật trước khi commit vào luồng chính, tránh lặp lại vòng build-fail như phiên này.
+Cơ chế đã cài (thay thế hoàn toàn nút "Dán ảnh" cũ): `NotebookRichEditor`'s `onFocusChange` khi field nhận focus (`isFocused == true`) sẽ gọi `AttachmentViewModel.autoPasteFromClipboardIfNew()`:
+- Đọc `ClipboardImageReader.fingerprint()` trước (Android: URI dạng string; iOS: `UIPasteboard.generalPasteboard.changeCount`) — nếu trùng với lần dán tự động gần nhất thì **bỏ qua**, tránh dán lặp lại cùng 1 ảnh mỗi lần focus lại vào field.
+- Fingerprint mới → đọc + copy ảnh thật (`ClipboardImageReader.read()`), gắn vào note.
+- Không có ảnh trong clipboard → im lặng không làm gì (vẫn chưa có snackbar báo lỗi khi cần — biết là thiếu).
+
+**Vì sao không chèn ảnh thật vào giữa đoạn văn (đúng vị trí con trỏ) như Word?** Đã cân nhắc `Modifier.receiveContent` (Compose Foundation) và API insert-ảnh-inline của `richeditor-compose`, nhưng cả hai đều là API mới/chưa xác nhận hoạt động ổn định trên iOS target của CMP 1.8.2, và **không thể verify tại chỗ** (không có Mac). Chọn phương án "ảnh luôn xếp dưới văn bản" vì chắc chắn hoạt động (đã build+test qua CI thành công), không đánh cược thêm 1 vòng build-fail. Nếu sau này muốn nâng cấp lên chèn ảnh đúng vị trí con trỏ — phải test được trên thiết bị iOS thật trước khi commit vào luồng chính.
+
+### Hiển thị ảnh: to, xếp dọc dưới văn bản (đã triển khai xong, không còn là "chưa làm")
+`AttachmentStrip` viết lại hoàn toàn: không còn hàng thẻ nhỏ 88×96dp nằm ngang + nút "+", giờ là `Column` xếp dọc, mỗi ảnh full-width (`ContentScale.FillWidth`), bo góc 16dp. Chỉ hiện ảnh (`AttachmentKind.IMAGE`) — video/PDF không còn đường vào từ note gõ tay (picker đã xoá, xem mục trên). Chạm để mở full-screen (qua `AttachmentOpener`, dùng app xem ảnh hệ thống), chạm giữ để hiện nút xoá.
 
 ---
 
@@ -83,7 +95,8 @@ Tông tím (không phải be/caramel ban đầu) — thẻ trắng nổi trên n
 
 ## Việc còn thiếu / chưa làm (thành thật)
 
-- Ảnh đính kèm to + xếp dọc dưới văn bản (đã chốt hướng, chưa code).
-- Thông báo khi "Dán ảnh" không tìm thấy ảnh trong clipboard (hiện im lặng no-op).
-- Rich text thật (heading, bullet thật) — hiện vẫn dùng in đậm/nghiêng/gạch chân qua `VisualTransformation` dạng span, chưa có cấu trúc đoạn thật.
+- Thông báo khi dán ảnh tự động không tìm thấy ảnh trong clipboard (hiện im lặng no-op).
+- Ảnh chèn đúng vị trí con trỏ giữa đoạn văn (hiện luôn xếp dưới toàn bộ văn bản) — rủi ro cao trên iOS, cố tình hoãn (xem mục "Đính kèm ảnh/file" ở trên).
+- Video/PDF không còn đường đính kèm vào note gõ tay nữa (đã xoá picker theo yêu cầu user) — nếu sau này cần lại, phải build UI mới, không phải bật lại `AttachmentPickerMenu` cũ vì `showAttachmentMenu`/`onAddAttachmentClick` đã bị xoá khỏi `NoteDetailScreen.kt`.
 - Tag AI sinh ra chưa hiển thị ở danh sách note.
+- Rich text: đã có bold/italic/underline/heading(giả)/bullet thật qua `richeditor-compose`. Chưa có: numbered list, đổi màu chữ, chèn ảnh inline (xem mục trên).
